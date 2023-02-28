@@ -179,12 +179,13 @@ void Dynamixel_Startup_Routine (){
 	}
 
 	// set home positions
+	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
 	dxl_bus_1.SetMultGoalPositions(dxl_ID, idLength, multiHomePos_1);
 	dxl_bus_2.SetMultGoalPositions(dxl_ID2, idLength2, multiHomePos_2);
 	dxl_bus_3.SetMultGoalPositions(dxl_IDPC, idLengthPC, multiHomePos_3);
 	dxl_bus_4.SetGoalPosition(9, 2048);
 	HAL_Delay(1000);
-	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+
 
 	// DXL profile fast remove gains?
 	for (int i=0; i<idLength; i++) {

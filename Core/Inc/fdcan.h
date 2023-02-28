@@ -98,7 +98,7 @@ extern FDCAN_HandleTypeDef hfdcan2;
 
 extern FDCAN_RxHeaderTypeDef rxMsg_sys;
 extern FDCAN_RxHeaderTypeDef rxMsg_sense;
-extern uint8_t sys_rx_buf[8];
+extern uint8_t sys_rx_buf[48];
 extern uint8_t sense_rx_buf[8];
 /* USER CODE END Private defines */
 
