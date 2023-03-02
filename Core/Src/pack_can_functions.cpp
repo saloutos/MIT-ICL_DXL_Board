@@ -66,7 +66,7 @@ void pack_reply48_joints(uint8_t* fdmsg, float* p, float* v, float* t){
 	}
 
 	int k = 0;
-	for (int j=0;j<9;j++){
+	for (int j=0;j<9;j++){ //TODO: Make the two for loops into one? Currently more readable I think.
 		fdmsg[k] = p_int[j]>>8;
 		fdmsg[k+1] = p_int[j]&0xFF;
 		fdmsg[k+2] = v_int[j]>>4;

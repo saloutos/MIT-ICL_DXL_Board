@@ -21,7 +21,11 @@ extern uint32_t multiHomePos_1[3];
 extern uint32_t multiHomePos_2[3];
 extern uint32_t multiHomePos_3[2];
 
-extern uint32_t multiGoalPos1[4], multiGoalPos2[4];
+extern uint32_t multiGoalPos_1[3];
+extern uint32_t multiGoalPos_2[3];
+extern uint32_t multiGoalPos_3[2];
+
+extern uint32_t multiGoalPosL[4], multiGoalPosR[4];
 
 #define rad2pulse_t(x) uint32_t(rad2pulse(x))
 #define deg2rad(x) float((PI/180.0f)*x)
@@ -147,14 +151,21 @@ void Dynamixel_Startup_Routine (){
 	// TODO: take this out? could leave it in for more controlled startup of the hand
 	ActuatorTransformationL(multiHomePosL, 0, 0, 0, 0);
 	ActuatorTransformationR(multiHomePosR, 0, 0, 0, 0);
-	ActuatorTransformationL(multiGoalPos1, deg2rad(10), deg2rad(10), deg2rad(10), deg2rad(10));
-	ActuatorTransformationR(multiGoalPos2, deg2rad(10), deg2rad(10), deg2rad(10), deg2rad(-10));
+	ActuatorTransformationL(multiGoalPosL, 0.4, -0.9, 1.2, 0);
+	ActuatorTransformationR(multiGoalPosR, -0.4, 0.9, -1.2, 0);
 	for (int i=0; i<idLength; i++) {
 		multiHomePos_1[i] = multiHomePosL[i];
 		multiHomePos_2[i] = multiHomePosR[i];
 	}
 	multiHomePos_3[0] = multiHomePosL[3];
 	multiHomePos_3[1] = multiHomePosR[3];
+
+	for (int i=0; i<idLength; i++) {
+		multiGoalPos_1[i] = multiGoalPosL[i];
+		multiGoalPos_2[i] = multiGoalPosR[i];
+	}
+	multiGoalPos_3[0] = multiGoalPosL[3];
+	multiGoalPos_3[1] = multiGoalPosR[3];
 
 	// DXL profile smooth
 	for (int i=0; i<idLength; i++) {
@@ -184,7 +195,7 @@ void Dynamixel_Startup_Routine (){
 	dxl_bus_2.SetMultGoalPositions(dxl_ID2, idLength2, multiHomePos_2);
 	dxl_bus_3.SetMultGoalPositions(dxl_IDPC, idLengthPC, multiHomePos_3);
 	dxl_bus_4.SetGoalPosition(9, 2048);
-	HAL_Delay(1000);
+	HAL_Delay(500);
 
 
 	// DXL profile fast remove gains?

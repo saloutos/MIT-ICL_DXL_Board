@@ -18,11 +18,21 @@
 #define pulse2deg(x) (360.0f/4096.0f)*(float)(x-2048.0f)
 
 uint32_t eval_time = 0;
+uint32_t cycle_count= 0;
+uint32_t old_cycle_count = 0;
+uint32_t f1_ct = 0;
+uint32_t f2_ct = 0;
+uint32_t t1_ct = 0;
+uint32_t t2_ct = 0;
+uint32_t tp_ct = 0;
+uint32_t cf_ct = 0;
+uint32_t ct[6];
 
 // System Control Mode
 volatile bool CURR_CONTROL = true;
 volatile bool MODE_SELECTED = false;
 uint8_t DXL_MODE;
+
 
 // Initialize CAN FD
 FDCAN_RxHeaderTypeDef rxMsg_sys, rxMsg_sense;
@@ -128,7 +138,7 @@ float desired_current[9];
 uint16_t current_command[9];
 
 // CAN command variables
-float dxl_pos_des[9] = {0.12f, 0.12f, 0.12f, -0.12f, -0.12f, -0.12f, 0.3f, 0.3f, 0.0f};
+float dxl_pos_des[9] = {0.12f, 0.12f, 0.12f, 0.3f, -0.12f, -0.12f, -0.12f, 0.3f, 0.0f};
 float dxl_vel_des[9] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 float dxl_tff_des[9] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 float dxl_kp[9] = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
@@ -147,10 +157,12 @@ uint32_t multiHomePosR[4];
 uint32_t rtPos_L[4];
 uint32_t rtPos_R[4];
 uint16_t multiGoalCurrent[4];
-uint32_t multiGoalPos1[4], multiGoalPos2[4];
+uint32_t multiGoalPosL[4], multiGoalPosR[4];
 uint32_t multiHomePos_1[3];
 uint32_t multiHomePos_2[3];
 uint32_t multiHomePos_3[2];
+
+uint32_t multiGoalPos_1[3], multiGoalPos_2[3], multiGoalPos_3[2];
 
 uint32_t rtPos_1[3];
 uint32_t rtPos_2[3];
@@ -478,6 +490,7 @@ void SetFullControlCommands_DMA()
 
 void updateBusses(){
 	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
+//	__HAL_TIM_SET_COUNTER(&htim5,0);
 	// update busses vars
 	double jointAngles1[4];
 	double jointVelocities1[4];
@@ -538,17 +551,18 @@ void updateBusses(){
 		float pos_act[9] = {(float)jointAngles1[0], (float)jointAngles1[1], (float)jointAngles1[2], (float)jointAngles1[3], (float)jointAngles2[0], (float)jointAngles2[1], (float)jointAngles2[2], (float)jointAngles2[3], (float)currentPos[8]};
 		float vel_act[9] = {(float)jointVelocities1[0], (float)jointVelocities1[1], (float)jointVelocities1[2], (float)jointVelocities1[3], (float)jointVelocities2[0], (float)jointVelocities2[1], (float)jointVelocities2[2], (float)jointVelocities2[3], (float)currentVel[8]};
 
-		float pos_des[9] = {dxl_pos_des[0], dxl_pos_des[1], dxl_pos_des[2], dxl_pos_des[3], dxl_pos_des[4], dxl_pos_des[5], dxl_pos_des[6],  dxl_pos_des[7], dxl_pos_des[8]};
-		float vel_des[9] = {dxl_vel_des[0], dxl_vel_des[1], dxl_vel_des[2],  dxl_vel_des[3], dxl_vel_des[4], dxl_vel_des[5], dxl_vel_des[6],  dxl_vel_des[7], dxl_vel_des[8]};
-
-		float KP_des[9] = {dxl_kp[0],dxl_kp[1],dxl_kp[2], dxl_kp[3], dxl_kp[4], dxl_kp[5], dxl_kp[6], dxl_kp[7], dxl_kp[8]}; // 0.8f*1.76f
-		float KD_des[9] = {dxl_kd[0],dxl_kd[1],dxl_kd[2], dxl_kd[3], dxl_kd[4], dxl_kd[5], dxl_kd[6],dxl_kd[7], dxl_kd[8]}; // 0.6f*0.026f
-		float tau_ff_des[9] = {dxl_tff_des[0],dxl_tff_des[1],dxl_tff_des[2],dxl_tff_des[3],dxl_tff_des[4],dxl_tff_des[5],dxl_tff_des[6],dxl_tff_des[7], dxl_tff_des[8] };
+//		float pos_des[9] = {dxl_pos_des[0], dxl_pos_des[1], dxl_pos_des[2], dxl_pos_des[3], dxl_pos_des[4], dxl_pos_des[5], dxl_pos_des[6],  dxl_pos_des[7], dxl_pos_des[8]};
+//		float vel_des[9] = {dxl_vel_des[0], dxl_vel_des[1], dxl_vel_des[2],  dxl_vel_des[3], dxl_vel_des[4], dxl_vel_des[5], dxl_vel_des[6],  dxl_vel_des[7], dxl_vel_des[8]};
+//
+//		float KP_des[9] = {dxl_kp[0],dxl_kp[1],dxl_kp[2], dxl_kp[3], dxl_kp[4], dxl_kp[5], dxl_kp[6], dxl_kp[7], dxl_kp[8]}; // 0.8f*1.76f
+//		float KD_des[9] = {dxl_kd[0],dxl_kd[1],dxl_kd[2], dxl_kd[3], dxl_kd[4], dxl_kd[5], dxl_kd[6],dxl_kd[7], dxl_kd[8]}; // 0.6f*0.026f
+//		float tau_ff_des[9] = {dxl_tff_des[0],dxl_tff_des[1],dxl_tff_des[2],dxl_tff_des[3],dxl_tff_des[4],dxl_tff_des[5],dxl_tff_des[6],dxl_tff_des[7], dxl_tff_des[8] };
 
 		float desired_joint_torques[9];
 		float desired_actuator_torques[9];
 		for(int i=0; i<9; i++)  {
-			 desired_joint_torques[i] = KP_des[i]*(pos_des[i]-pos_act[i]) + KD_des[i]*(vel_des[i]-vel_act[i]) + tau_ff_des[i];
+//			 desired_joint_torques[i] = KP_des[i]*(pos_des[i]-pos_act[i]) + KD_des[i]*(vel_des[i]-vel_act[i]) + tau_ff_des[i];
+			 desired_joint_torques[i] = dxl_kp[i]*(dxl_pos_des[i]-pos_act[i]) + dxl_kd[i]*(dxl_vel_des[i]-vel_act[i]) + dxl_tff_des[i];
 	//         desired_joint_torques[i] = -0.1f*pos_act[i] - 0.01f*vel_act[i]; // basic impedance controller in joint space
 		}
 
@@ -656,7 +670,7 @@ int dxl_main(void)
 	txHeader_fd_joints.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
 	txHeader_fd_joints.BitRateSwitch = FDCAN_BRS_ON;
 	txHeader_fd_joints.FDFormat = FDCAN_FD_CAN;
-	txHeader_fd_joints.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
+	txHeader_fd_joints.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	txHeader_fd_joints.MessageMarker = 0;
 
 	txHeader_fd_sens.Identifier = 0x02;
@@ -666,7 +680,7 @@ int dxl_main(void)
 	txHeader_fd_sens.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
 	txHeader_fd_sens.BitRateSwitch = FDCAN_BRS_ON;
 	txHeader_fd_sens.FDFormat = FDCAN_FD_CAN;
-	txHeader_fd_sens.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
+	txHeader_fd_sens.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	txHeader_fd_sens.MessageMarker = 0;
 
 	//Rx Filters
@@ -680,10 +694,10 @@ int dxl_main(void)
 
 	sense_can_filt.IdType = FDCAN_STANDARD_ID;
 	sense_can_filt.FilterIndex = 0;
-	sense_can_filt.FilterType = FDCAN_FILTER_MASK;
+	sense_can_filt.FilterType = FDCAN_FILTER_RANGE;
 	sense_can_filt.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
-	sense_can_filt.FilterID1 = 0x00;
-	sense_can_filt.FilterID2 = 0x00;
+	sense_can_filt.FilterID1 = 0x05;
+	sense_can_filt.FilterID2 = 0x0A;
 	sense_can_filt.RxBufferIndex = 0;
 
 	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sys_can_filt) != HAL_OK)
@@ -718,10 +732,11 @@ int dxl_main(void)
 	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);//
 
 	while (!MODE_SELECTED){
-		HAL_Delay(1000);
+		HAL_Delay(500);
 		printf("Waiting for Mode Select..\n\r");
+		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
 	}
-
+	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
 	printf("Mode Selected..\n\r");
 	HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
 
@@ -733,6 +748,46 @@ int dxl_main(void)
 	printf("Setting up Dynamixel bus.\n\r");
 	Dynamixel_Startup_Routine();
 
+//	if (CURR_CONTROL){
+//		for (int i=0; i<idLength; i++) {
+//			dxl_bus_1.SetVelocityProfile(dxl_ID[i], 414); // 414(94.81RPM) @ 14.8V, 330(75.57RPM) @ 12V
+//			dxl_bus_1.SetAccelerationProfile(dxl_ID[i], 100); // 80(17166) rev/min^2
+//			dxl_bus_1.SetPosPGain(dxl_ID[i], 800);
+//			dxl_bus_1.SetPosDGain(dxl_ID[i], 0);
+//			dxl_bus_1.SetGoalCurrent(dxl_ID[i], 1193);
+//			HAL_Delay(100);
+//		}
+//		for (int i=0; i<idLength2; i++) {
+//			dxl_bus_2.SetVelocityProfile(dxl_ID2[i], 414);
+//			dxl_bus_2.SetAccelerationProfile(dxl_ID2[i], 100);
+//			dxl_bus_2.SetPosPGain(dxl_ID2[i], 800);
+//			dxl_bus_2.SetPosDGain(dxl_ID2[i], 0);
+//			dxl_bus_2.SetGoalCurrent(dxl_ID[i], 1193);
+//			HAL_Delay(100);
+//		}
+//		for (int i=0; i<idLengthPC; i++) {
+//			dxl_bus_3.SetVelocityProfile(dxl_IDPC[i], 414);
+//			dxl_bus_3.SetAccelerationProfile(dxl_IDPC[i], 100);
+//			dxl_bus_3.SetPosPGain(dxl_IDPC[i], 800);
+//			dxl_bus_3.SetPosDGain(dxl_IDPC[i], 0);
+//			dxl_bus_3.SetGoalCurrent(dxl_ID[i], 1193);
+//			HAL_Delay(100);
+//		}
+//		for (int i=0; i<idLengthWR; i++) {
+//			dxl_bus_4.SetVelocityProfile(dxl_IDWR[i], 414);
+//			dxl_bus_4.SetAccelerationProfile(dxl_IDWR[i], 100);
+//			dxl_bus_4.SetPosPGain(dxl_IDWR[i], 800);
+//			dxl_bus_4.SetPosDGain(dxl_IDWR[i], 0);
+//			dxl_bus_4.SetGoalCurrent(dxl_ID[i], 2047);
+//			HAL_Delay(100);
+//		}
+//		dxl_bus_1.SetMultGoalPositions(dxl_ID, idLength, multiGoalPos_1);
+//		dxl_bus_2.SetMultGoalPositions(dxl_ID2, idLength2, multiGoalPos_2);
+//		dxl_bus_3.SetMultGoalPositions(dxl_IDPC, idLengthPC, multiGoalPos_3);
+//		dxl_bus_4.SetGoalPosition(9, 2048);
+//		HAL_Delay(100);
+//	}
+
 	// enable CAN Interrupts
 	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);// Initialize CAN1 Rx0 Interrupt
 	HAL_FDCAN_ActivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE,0);// Initialize CAN2 Rx1 Interrupt
@@ -743,14 +798,16 @@ int dxl_main(void)
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
 
-	int loop_count = 0;
+//	int loop_count = 0;
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 	while (1)
 	{
-		if(loop_count % 50000 == 0){
-			printf("loop time: %lu \r\n",eval_time);
-			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-		}
-		loop_count++;
+//		if(loop_count % 1000000 == 0){
+//			printf("loop time: %lu \r\n",eval_time);
+//			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+//			printf("%lu, f1: %lu, f2: %lu, t1: %lu, t2: %lu, tp: %lu\r\n",cf_ct, f1_ct, f2_ct, t1_ct, t2_ct, tp_ct);
+//		}
+//		loop_count++;
 	}
 }
 
@@ -811,45 +868,6 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 		tx_flag_5 = 1;
 	}
 }
-
-
-//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0ITs)
-//{
-//	if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET){
-////		if (canHandle->Instance==FDCAN1){ // system CAN
-//			HAL_FDCAN_GetRxMessage(canHandle, FDCAN_RX_FIFO0, &rxMsg_sys, sys_rx_buf);
-//	//		unpack_cmd(sys_rx_buf, rxMsg_sys.StdId);
-//
-//			int p_int = (sys_rx_buf[0]<<8)|sys_rx_buf[1];
-//			int v_int = (sys_rx_buf[2]<<4)|(sys_rx_buf[3]>>4);
-//			int kp_int = ((sys_rx_buf[3]&0xF)<<8)|sys_rx_buf[4];
-//			int kd_int = (sys_rx_buf[5]<<4)|(sys_rx_buf[6]>>4);
-//			int t_int = ((sys_rx_buf[6]&0xF)<<8)|sys_rx_buf[7];
-//
-//			uint32_t id = rxMsg_sys.Identifier;
-//
-//	//	    printf("%d", id);
-//
-//			if (id == 0){ //WRIST ROLL
-//				dxl_pos_des[8] = uint_to_float(p_int, P_MIN, P_MAX, 16);
-//				dxl_vel_des[8] = uint_to_float(v_int, V_MIN, V_MAX, 12);
-//				dxl_kp[8] = uint_to_float(kp_int, KP_MIN, KP_MAX, 12)/KP_SCALE;
-//				dxl_kd[8] = uint_to_float(kd_int, KD_MIN, KD_MAX, 12)/KD_SCALE;
-//				dxl_tff_des[8] = uint_to_float(t_int, T_MIN, T_MAX, 12)/T_SCALE;
-//	//	        printf("\n");
-//			}
-//			else {
-//				dxl_pos_des[id-CAN_TX_DXL1] = uint_to_float(p_int, P_MIN, P_MAX, 16);
-//				dxl_vel_des[id-CAN_TX_DXL1] = uint_to_float(v_int, V_MIN, V_MAX, 12);
-//				dxl_kp[id-CAN_TX_DXL1] = uint_to_float(kp_int, KP_MIN, KP_MAX, 12)/KP_SCALE;
-//				dxl_kd[id-CAN_TX_DXL1] = uint_to_float(kd_int, KD_MIN, KD_MAX, 12)/KD_SCALE;
-//				dxl_tff_des[id-CAN_TX_DXL1] = uint_to_float(t_int, T_MIN, T_MAX, 12)/T_SCALE;
-//			}
-//
-////		}
-//	}
-//
-//}
 
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0ITs)
 {
@@ -915,15 +933,20 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1ITs)
 {
 	if((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) != RESET){
+//		cf_ct++;
 //		if (canHandle->Instance==FDCAN2){ // sensor CAN
 			HAL_FDCAN_GetRxMessage(canHandle, FDCAN_RX_FIFO1, &rxMsg_sense, sense_rx_buf);
 	//		unpack_sensor(sense_rx_buf, rxMsg_sense.StdId);
 
-			uint32_t id = rxMsg_sense.Identifier;
-//			printf("%d\n\r", id);
+			uint8_t id = rxMsg_sense.Identifier;
+//			printf("%ud\n\r", id);
 
 			if (id == CAN2_FORCE_1){
 				// unpack forces and angles
+//				cycle_count = __HAL_TIM_GET_COUNTER(&htim1);
+//				printf("Cycle: %lu\r\n",cycle_count);
+//				__HAL_TIM_SET_COUNTER(&htim1, 0);
+//				f1_ct++;
 				uint16_t fx_int = ((sense_rx_buf[0]&0x0F)<<8)|sense_rx_buf[1];
 				uint16_t fy_int = (sense_rx_buf[2]<<4)|(sense_rx_buf[3]>>4);
 				uint16_t fz_int = ((sense_rx_buf[3]&0x0F)<<8)|sense_rx_buf[4];
@@ -937,6 +960,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 				force1[4]  = uint_to_float(phi_int, ANG_MIN, ANG_MAX, 12);
 			}
 			else if (id == CAN2_FORCE_2){
+//				f2_ct++;
 				// unpack forces and angles
 				uint16_t fx_int = ((sense_rx_buf[0]&0x0F)<<8)|sense_rx_buf[1];
 				uint16_t fy_int = (sense_rx_buf[2]<<4)|(sense_rx_buf[3]>>4);
@@ -951,16 +975,19 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 				force2[4]  = uint_to_float(phi_int, ANG_MIN, ANG_MAX, 12);
 			}
 			else if (id == CAN2_TOF_1){
+//				t1_ct++;
 				for(int i = 0;i<8;i++){
 					tof1[i] = sense_rx_buf[i];
 				}
 			}
 			else if (id == CAN2_TOF_2){
+//				t2_ct++;
 				for(int i = 0;i<8;i++){
 					tof2[i] = sense_rx_buf[i];
 				}
 			}
 			else if (id == CAN2_TOF_PALM){ // TODO: change this!!!
+//				tp_ct++;
 				palmTOF = sense_rx_buf[0];
 			}
 
