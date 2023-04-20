@@ -334,30 +334,15 @@ uint8_t XM430_bus::GetID(uint8_t id)
     return GetSomething(id, XM_ID_ADDRESS);
 }
 
-//void XM430_bus::SetBaudRate(uint8_t id, uint8_t baudrt)
-//{
-//    uint8_t parameter[1];
-//    parameter[0] = baudrt;
-//
-//    SetSomething(id, BAUD_RATE, parameter, 1);
-//
-//    switch (baudrt) {
-//        case 0:
-//            sbus.baud(9600);
-//            break;
-//        case 1:
-//            sbus.baud(57600);
-//            break;
-//        case 2:
-//            sbus.baud(115200);
-//            break;
-//        case 3:
-//            sbus.baud(1000000);
-//            break;
-//    }
-//
-//    HAL_Delay(200);   //Waits for the value to be written in EEPROM
-//}
+void XM430_bus::SetBaudRate(uint8_t id, uint8_t baudrt)
+{
+    uint8_t parameter[1];
+    parameter[0] = baudrt;
+
+    SetSomething(id, BAUD_RATE, parameter, 1);
+
+    HAL_Delay(200);   //Waits for the value to be written in EEPROM
+}
 
 uint8_t XM430_bus::GetBaudRate(uint8_t id)
 {

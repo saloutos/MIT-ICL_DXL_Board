@@ -38,7 +38,7 @@ void Dynamixel_Startup_Routine (){
 	for (int i=0; i<idLength; i++) {
 		dxl_bus_1.TurnOnLED(dxl_ID[i], 0x00); // turn off LED
 		dxl_bus_1.SetTorqueEn(dxl_ID[i],0x00);
-		dxl_bus_1.SetRetDelTime(dxl_ID[i],0x00); // 4us delay time?
+		dxl_bus_1.SetRetDelTime(dxl_ID[i],0x02); // 4us delay time?
 		dxl_bus_1.SetControlMode(dxl_ID[i], DXL_MODE);
 		// set up indirect addresses for faster writing
 		dxl_bus_1.SetIndirectAddress(dxl_ID[i], 168,  84); // KP
@@ -66,7 +66,7 @@ void Dynamixel_Startup_Routine (){
 	for (int i=0; i<idLength2; i++) {
 		dxl_bus_2.TurnOnLED(dxl_ID2[i], 0x00); // turn off LED
 		dxl_bus_2.SetTorqueEn(dxl_ID2[i],0x00);
-		dxl_bus_2.SetRetDelTime(dxl_ID2[i],0x00); // 4us delay time?
+		dxl_bus_2.SetRetDelTime(dxl_ID2[i],0x02); // 4us delay time?
 		dxl_bus_2.SetControlMode(dxl_ID2[i], DXL_MODE);
 		// set up indirect addresses for faster writing
 		dxl_bus_2.SetIndirectAddress(dxl_ID2[i], 168,  84); // KP
@@ -94,7 +94,7 @@ void Dynamixel_Startup_Routine (){
 	for (int i=0; i<idLengthPC; i++) {
 		dxl_bus_3.TurnOnLED(dxl_IDPC[i], 0x00); // turn off LED
 		dxl_bus_3.SetTorqueEn(dxl_IDPC[i],0x00);
-		dxl_bus_3.SetRetDelTime(dxl_IDPC[i],0x00); // 4us delay time?
+		dxl_bus_3.SetRetDelTime(dxl_IDPC[i],0x02); // 4us delay time?
 		dxl_bus_3.SetControlMode(dxl_IDPC[i], DXL_MODE);
 		// set up indirect addresses for faster writing
 		dxl_bus_3.SetIndirectAddress(dxl_IDPC[i], 168,  84); // KP
@@ -122,7 +122,7 @@ void Dynamixel_Startup_Routine (){
 	for (int i=0; i<idLengthWR; i++) {
 		dxl_bus_4.TurnOnLED(dxl_IDWR[i], 0x00); // turn off LED
 		dxl_bus_4.SetTorqueEn(dxl_IDWR[i],0x00);
-		dxl_bus_4.SetRetDelTime(dxl_IDWR[i],0x00); // 4us delay time?
+		dxl_bus_4.SetRetDelTime(dxl_IDWR[i],0x02); // 4us delay time?
 		dxl_bus_4.SetControlMode(dxl_IDWR[i], DXL_MODE);
 		// set up indirect addresses for faster writing
 		dxl_bus_4.SetIndirectAddress(dxl_IDWR[i], 168,  84); // KP

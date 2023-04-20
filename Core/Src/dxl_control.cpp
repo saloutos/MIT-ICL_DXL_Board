@@ -16,7 +16,7 @@
 #define deg2rad(x) float((PI/180.0f)*x)
 #define pulse2deg(x) (360.0f/4096.0f)*(float)(x-2048.0f)
 
-uint32_t eval_time = 0;
+uint32_t eval_time[3] = {0, 0, 0};
 uint32_t cycle_count= 0;
 uint32_t old_cycle_count = 0;
 uint32_t f1_ct = 0;
@@ -105,27 +105,27 @@ float pulse_to_rad = (2.0f*PI)/4096.0f; // = 0.001534
 float rpm_to_rads = (0.229f*2.0f*PI)/60.0f; // = 0.0239
 
 // from joint space to actuator space... phidot = Jact*thetadot
-float JactL[4][4] = { {(13.88f/15.48f), 0.0f, 0.0f, -(16.38f/15.48f)},
-                     {(9.68f/15.48f), (13.88f/15.48f), 0.0f, (11.48f/15.48f)},
-                     {(5.48f/15.48f), (5.48f/15.48f), (13.88f/15.48f), -(8.08f/15.48f)},
-                     {0.0f, 0.0f, 0.0f, (15.98f/15.48f)} };
+float JactL[4][4] = { {(14.38f/14.38f), 0.0f, 0.0f, -(16.38f/15.98f)},
+                     {(9.98f/14.38f), (14.38f/14.38f), 0.0f, (11.48f/15.98f)},
+                     {(5.58f/14.38f), (9.98f/14.38f), (14.38f/14.38f), -(8.08f/15.98f)},
+                     {0.0f, 0.0f, 0.0f, (15.98f/15.98f)} };
 
-float JactR[4][4] = { {(13.88f/15.48f), 0.0f, 0.0f, -(16.38f/15.48f)},
-                     {(9.68f/15.48f), (13.88f/15.48f), 0.0f, (11.48f/15.48f)},
-                     {(5.48f/15.48f), (5.48f/15.48f), (13.88f/15.48f), -(8.08f/15.48f)},
-                     {0.0f, 0.0f, 0.0f, (15.98f/15.48f)} };
+float JactR[4][4] = { {(14.38f/14.38f), 0.0f, 0.0f, -(16.38f/15.98f)},
+                     {(9.98f/14.38f), (14.38f/14.38f), 0.0f, (11.48f/15.98f)},
+                     {(5.58f/14.38f), (9.98f/14.38f), (14.38f/14.38f), -(8.08f/15.98f)},
+                     {0.0f, 0.0f, 0.0f, (15.98f/15.98f)} };
 
 // from actuator space to joint space... thetadot = Jjoint*phidot
-float JjointL[4][4] = {{1.11527378f, 0.0f, 0.0f, 1.14319052f},
-                     {-0.777799f, 1.11527378f, 0.0f, -1.59847876f},
-                     {-0.13323932f, -0.44032423f, 1.11527378f, 0.74367173f},
-                     {0.0f, 0.0f, 0.0f, 0.96871089f}};
+float JjointL[4][4] = {{1.0, 0.0f, 0.0f, 1.025031289f},
+                     {-0.694019471f, 1.0f, 0.0f, -1.429789671f},
+                     {0.0936240838f, -0.6940194714f, 1.0f, 1.1001818539f},
+                     {0.0f, 0.0f, 0.0f, 1.0f}};
 
 
-float JjointR[4][4] = {{1.11527378f, 0.0f, 0.0f, 1.14319052f},
-                     {-0.777799f, 1.11527378f, 0.0f, -1.59847876f},
-                     {-0.13323932f, -0.44032423f, 1.11527378f, 0.74367173f},
-                     {0.0f, 0.0f, 0.0f, 0.96871089f}};
+float JjointR[4][4] = {{1.0, 0.0f, 0.0f, 1.025031289f},
+                     {-0.694019471f, 1.0f, 0.0f, -1.429789671f},
+                     {0.0936240838f, -0.6940194714f, 1.0f, 1.1001818539f},
+                     {0.0f, 0.0f, 0.0f, 1.0f}};
 
 
 int32_t dxl_position[9];
@@ -167,7 +167,7 @@ uint32_t rtPos_2[3];
 uint32_t rtPos_3[2];
 uint32_t trajPos[9];
 
-double dt = 0.002; //2ms
+double dt = 0.001; //1.5ms
 uint32_t time_step = 0;
 int32_t dxl_time;
 float freq1 = 1; //9.5
@@ -175,7 +175,7 @@ float freq2 = freq1/2.0f;
 float amp1 = (PI/180)*20;
 float amp2 = (PI/180)*12;
 uint8_t idx_freq = 0;
-float max_freq =21;
+float max_freq =22;
 bool updown = true;
 
 
@@ -206,25 +206,36 @@ void GetBulkData_DMA()
 	tx_flag_5 = 0;
 	rx_flag_5 = 0;
 
+//	dxl_bus_1.sendIPacket_DMA();
+//	while(!tx_flag_1){;}
+//	dxl_bus_1.getRPacket_DMA();
+//	while(!rx_flag_1){;}
+//
+//	dxl_bus_2.sendIPacket_DMA();
+//	while(!tx_flag_2){;}
+//	dxl_bus_2.getRPacket_DMA();
+//	while(!rx_flag_2){;}
+//
+//	dxl_bus_3.sendIPacket_DMA();
+//	while(!tx_flag_3){;}
+//	dxl_bus_3.getRPacket_DMA();
+//	while(!rx_flag_3){;}
+//
+//	dxl_bus_4.sendIPacket_DMA();
+//	while(!tx_flag_5){;}
+//	dxl_bus_4.getRPacket_DMA();
+//	while(!rx_flag_5){;}
+
 	dxl_bus_1.sendIPacket_DMA();
-	while(!tx_flag_1){;}
-	dxl_bus_1.getRPacket_DMA();
-	while(!rx_flag_1){;}
-
 	dxl_bus_2.sendIPacket_DMA();
-	while(!tx_flag_2){;}
-	dxl_bus_2.getRPacket_DMA();
-	while(!rx_flag_2){;}
-
 	dxl_bus_3.sendIPacket_DMA();
-	while(!tx_flag_3){;}
-	dxl_bus_3.getRPacket_DMA();
-	while(!rx_flag_3){;}
-
 	dxl_bus_4.sendIPacket_DMA();
-	while(!tx_flag_5){;}
+	while((!tx_flag_1)||(!tx_flag_2)||(!tx_flag_3)||(!tx_flag_5)){;}
+	dxl_bus_1.getRPacket_DMA();
+	dxl_bus_2.getRPacket_DMA();
+	dxl_bus_3.getRPacket_DMA();
 	dxl_bus_4.getRPacket_DMA();
-	while(!rx_flag_5){;}
+	while((!rx_flag_1)||(!rx_flag_2)||(!rx_flag_3)||(!rx_flag_5)){;}
 
 //	while((rx_flag_1==0)||(rx_flag_2==0)||(rx_flag_6==0)||(rx_flag_7==0)){;}
 	// for loop to extract ret_vals from rPackets
@@ -292,68 +303,68 @@ void GetBulkData_DMA()
 }
 
 
-void SetCurrentCommands_DMA()
-{
-    uint8_t num_params1 = idLength*3; // 1 for ID + 2 for data length
-    uint8_t parameter1[num_params1];
-    uint8_t num_params2 = idLength2*3; // 1 for ID + 2 for data length
-	uint8_t parameter2[num_params2];
-	uint8_t num_params3 = idLengthPC*3; // 1 for ID + 2 for data length
-	uint8_t parameter3[num_params3];
-	uint8_t num_params4 = idLengthWR*3; // 1 for ID + 2 for data length
-	uint8_t parameter4[num_params4];
-
-    for (int i=0; i<idLength; i++){
-    	int j = i*3;
-		int k = dxl_ID[i]-1;
-		uint32_t cur = cur_command[k];
-		parameter1[j]    = (uint8_t) k;
-		parameter1[j+1] = SHIFT_TO_LSB(cur);
-		parameter1[j+2] = SHIFT_TO_MSB(cur);
-	}
-    for (int i=0; i<idLength2; i++){
-    	int j = i*3;
-		int k = dxl_ID2[i]-1;
-		uint32_t cur = cur_command[k];
-		parameter2[j]    = (uint8_t) k;
-		parameter2[j+1] = SHIFT_TO_LSB(cur);
-		parameter2[j+2] = SHIFT_TO_MSB(cur);
-	}
-    for (int i=0; i<idLengthPC; i++){
-		int j = i*3;
-		int k = dxl_IDPC[i]-1;
-		uint32_t cur = cur_command[k];
-		parameter3[j]    = (uint8_t) k;
-		parameter3[j+1] = SHIFT_TO_LSB(cur);
-		parameter3[j+2] = SHIFT_TO_MSB(cur);
-	}
-    for (int i=0; i<idLengthWR; i++){
-    	int j = i*3;
-		int k = dxl_IDWR[i]-1;
-		uint32_t cur = cur_command[k];
-		parameter4[j]   = (uint8_t) k;
-		parameter4[j+1] = SHIFT_TO_LSB(cur);
-		parameter4[j+2] = SHIFT_TO_MSB(cur);
-	}
-
-    dxl_bus_1.sWrite(2, FF_CUR_OFST, parameter1, num_params1);
-    dxl_bus_2.sWrite(2, FF_CUR_OFST, parameter2, num_params2);
-    dxl_bus_3.sWrite(2, FF_CUR_OFST, parameter3, num_params3);
-    dxl_bus_4.sWrite(2, FF_CUR_OFST, parameter4, num_params4);
-    tx_flag_1 = 0;
-	tx_flag_2 = 0;
-	tx_flag_3 = 0;
-	tx_flag_5 = 0;
-    dxl_bus_1.sendIPacket_DMA();
-    while(!tx_flag_1){;}
-	dxl_bus_2.sendIPacket_DMA();
-	while(!tx_flag_2){;}
-	dxl_bus_3.sendIPacket_DMA();
-	while(!tx_flag_3){;}
-	dxl_bus_4.sendIPacket_DMA();
-	while(!tx_flag_5){;}
-
-}
+//void SetCurrentCommands_DMA()
+//{
+//    uint8_t num_params1 = idLength*3; // 1 for ID + 2 for data length
+//    uint8_t parameter1[num_params1];
+//    uint8_t num_params2 = idLength2*3; // 1 for ID + 2 for data length
+//	uint8_t parameter2[num_params2];
+//	uint8_t num_params3 = idLengthPC*3; // 1 for ID + 2 for data length
+//	uint8_t parameter3[num_params3];
+//	uint8_t num_params4 = idLengthWR*3; // 1 for ID + 2 for data length
+//	uint8_t parameter4[num_params4];
+//
+//    for (int i=0; i<idLength; i++){
+//    	int j = i*3;
+//		int k = dxl_ID[i]-1;
+//		uint32_t cur = cur_command[k];
+//		parameter1[j]    = (uint8_t) k;
+//		parameter1[j+1] = SHIFT_TO_LSB(cur);
+//		parameter1[j+2] = SHIFT_TO_MSB(cur);
+//	}
+//    for (int i=0; i<idLength2; i++){
+//    	int j = i*3;
+//		int k = dxl_ID2[i]-1;
+//		uint32_t cur = cur_command[k];
+//		parameter2[j]    = (uint8_t) k;
+//		parameter2[j+1] = SHIFT_TO_LSB(cur);
+//		parameter2[j+2] = SHIFT_TO_MSB(cur);
+//	}
+//    for (int i=0; i<idLengthPC; i++){
+//		int j = i*3;
+//		int k = dxl_IDPC[i]-1;
+//		uint32_t cur = cur_command[k];
+//		parameter3[j]    = (uint8_t) k;
+//		parameter3[j+1] = SHIFT_TO_LSB(cur);
+//		parameter3[j+2] = SHIFT_TO_MSB(cur);
+//	}
+//    for (int i=0; i<idLengthWR; i++){
+//    	int j = i*3;
+//		int k = dxl_IDWR[i]-1;
+//		uint32_t cur = cur_command[k];
+//		parameter4[j]   = (uint8_t) k;
+//		parameter4[j+1] = SHIFT_TO_LSB(cur);
+//		parameter4[j+2] = SHIFT_TO_MSB(cur);
+//	}
+//
+//    dxl_bus_1.sWrite(2, FF_CUR_OFST, parameter1, num_params1);
+//    dxl_bus_2.sWrite(2, FF_CUR_OFST, parameter2, num_params2);
+//    dxl_bus_3.sWrite(2, FF_CUR_OFST, parameter3, num_params3);
+//    dxl_bus_4.sWrite(2, FF_CUR_OFST, parameter4, num_params4);
+//    tx_flag_1 = 0;
+//	tx_flag_2 = 0;
+//	tx_flag_3 = 0;
+//	tx_flag_5 = 0;
+//    dxl_bus_1.sendIPacket_DMA();
+//    while(!tx_flag_1){;}
+//	dxl_bus_2.sendIPacket_DMA();
+//	while(!tx_flag_2){;}
+//	dxl_bus_3.sendIPacket_DMA();
+//	while(!tx_flag_3){;}
+//	dxl_bus_4.sendIPacket_DMA();
+//	while(!tx_flag_5){;}
+//
+//}
 
 
 void SetFullControlCommands_DMA()
@@ -473,13 +484,13 @@ void SetFullControlCommands_DMA()
 	tx_flag_3 = 0;
 	tx_flag_5 = 0;
     dxl_bus_1.sendIPacket_DMA();
-    while(!tx_flag_1){;}
+//  while(!tx_flag_1){;}
 	dxl_bus_2.sendIPacket_DMA();
-	while(!tx_flag_2){;}
+//	while(!tx_flag_2){;}
 	dxl_bus_3.sendIPacket_DMA();
-	while(!tx_flag_3){;}
+//	while(!tx_flag_3){;}
 	dxl_bus_4.sendIPacket_DMA();
-	while(!tx_flag_5){;}
+//	while(!tx_flag_5){;}
 
 }
 
@@ -487,7 +498,7 @@ void SetFullControlCommands_DMA()
 
 
 void updateBusses(){
-	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
+//	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
 //	__HAL_TIM_SET_COUNTER(&htim5,0);
 	// update busses vars
 	double jointAngles1[4];
@@ -498,8 +509,10 @@ void updateBusses(){
 	float jointTorques1[4];
 	float jointTorques2[4];
 	float velData[8];
-
+	__HAL_TIM_SET_COUNTER(&htim1,0);
 	GetBulkData_DMA();
+	eval_time[0] = __HAL_TIM_GET_COUNTER(&htim1);
+	__HAL_TIM_SET_COUNTER(&htim1,0);
 	if (CURR_CONTROL){
 		for(int i=0; i<8; i++){
 			velData[i] = rpm_to_rads*(float)dxl_velocity[i];
@@ -610,7 +623,7 @@ void updateBusses(){
 	}
 
     else {
-		if (time_step % 2000 == 0) {
+		if (time_step % 4000==0) {
 			if (freq1 < max_freq && updown) {
 				freq1++;
 			}
@@ -639,9 +652,10 @@ void updateBusses(){
 			kd_command[i] = 0;
 		}
     }
-
+	eval_time[1] = __HAL_TIM_GET_COUNTER(&htim1);
+	__HAL_TIM_SET_COUNTER(&htim1,0);
     SetFullControlCommands_DMA();
-    eval_time = __HAL_TIM_GET_COUNTER(&htim1);
+    eval_time[2] = __HAL_TIM_GET_COUNTER(&htim1);
 }
 
 

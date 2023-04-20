@@ -144,7 +144,7 @@ public:
     /***** XM430 Network Parameter *****/
     void SetID(uint8_t id, uint8_t newId);
     uint8_t GetID(uint8_t id);
-//    void SetBaudRate(uint8_t id, uint8_t baudrate);
+    void SetBaudRate(uint8_t id, uint8_t baudrate);
     uint8_t GetBaudRate(uint8_t id);
     void SetRetDelTime(uint8_t id, uint8_t time);
     uint8_t GetRetDelTime(uint8_t id);
