@@ -12,7 +12,6 @@
 #include "actuator_transformation.h"
 #include "ForceSensor.h"
 #include "neural_nets.h"
-
 #define rad2pulse_t(x) uint32_t(rad2pulse(x))
 #define deg2rad(x) float((PI/180.0f)*x)
 #define pulse2deg(x) (360.0f/4096.0f)*(float)(x-2048.0f)
@@ -32,7 +31,6 @@ uint32_t ct[6];
 volatile bool CURR_CONTROL = true;
 volatile bool MODE_SELECTED = false;
 uint8_t DXL_MODE;
-
 
 // Initialize CAN FD
 FDCAN_RxHeaderTypeDef rxMsg_sys, rxMsg_sense;
