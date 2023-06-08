@@ -69,6 +69,8 @@ void Error_Handler(void);
 #define RTS1_GPIO_Port GPIOA
 #define RTS5_Pin GPIO_PIN_3
 #define RTS5_GPIO_Port GPIOD
+#define RTS7_Pin GPIO_PIN_7
+#define RTS7_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 

@@ -15,6 +15,7 @@
 #define rad2pulse_t(x) uint32_t(rad2pulse(x))
 #define deg2rad(x) float((PI/180.0f)*x)
 #define pulse2deg(x) (360.0f/4096.0f)*(float)(x-2048.0f)
+#define VERSION_NUMBER 1.00f
 
 uint32_t eval_time[3] = {0, 0, 0};
 uint32_t cycle_count= 0;
@@ -45,7 +46,7 @@ uint8_t sense_rx_buf[8]; // TODO: could make this shorter?
 /* Initialization */
 XM430_bus dxl_bus_1(&huart1, RTS1_GPIO_Port, RTS1_Pin);
 XM430_bus dxl_bus_2(&huart2, RTS2_GPIO_Port, RTS2_Pin);
-XM430_bus dxl_bus_3(&huart3, RTS3_GPIO_Port, RTS3_Pin);
+XM430_bus dxl_bus_3(&huart7, RTS7_GPIO_Port, RTS7_Pin);
 XM430_bus dxl_bus_4(&huart5, RTS5_GPIO_Port, RTS5_Pin); // use just for wrist motor? // getting weird
 
 uint8_t dxl_IDs[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -673,7 +674,8 @@ void sendCAN(){
 // main CPP loop
 int dxl_main(void)
 {
-
+	printf("\r\n--------MIT Hand Control Board Firmware--------\r\n");
+	printf("Version No: %.2f\r\n\n\n", VERSION_NUMBER);
 	//Tx Headers
 	txHeader_fd_joints.Identifier = 0x01;
 	txHeader_fd_joints.IdType = FDCAN_STANDARD_ID;
@@ -850,7 +852,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	} else if(huart->Instance==USART2){
 //		printf("Rx 2 done!\n\r");
 		rx_flag_2 = 1;
-	} else if(huart->Instance==USART3){
+	} else if(huart->Instance==UART7){
 //		printf("Rx 3 done!\n\r");
 		rx_flag_3 = 1;
 	} else if(huart->Instance==UART5){
@@ -870,8 +872,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_GPIO_WritePin(RTS2_GPIO_Port, RTS2_Pin, GPIO_PIN_RESET);
 //		printf("Tx 2 done!\n\r");
 		tx_flag_2 = 1;
-	} else if(huart->Instance==USART3){
-		HAL_GPIO_WritePin(RTS3_GPIO_Port, RTS3_Pin, GPIO_PIN_RESET);
+	} else if(huart->Instance==UART7){
+		HAL_GPIO_WritePin(RTS7_GPIO_Port, RTS7_Pin, GPIO_PIN_RESET);
 //		printf("Tx 3 done!\n\r");
 		tx_flag_3 = 1;
 	} else if(huart->Instance==UART5){

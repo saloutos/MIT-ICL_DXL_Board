@@ -100,7 +100,6 @@ int main(void)
   MX_UART5_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_USART3_UART_Init();
   MX_USART6_UART_Init();
   MX_FDCAN1_Init();
   MX_TIM1_Init();
@@ -108,6 +107,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM5_Init();
   MX_FDCAN2_Init();
+  MX_UART7_Init();
   /* USER CODE BEGIN 2 */
   HAL_NVIC_DisableIRQ(TIM2_IRQn);
   HAL_NVIC_DisableIRQ(TIM3_IRQn);
@@ -117,7 +117,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	printf("\n\rStarting Dynamixel control...\n\r");
+//	printf("\n\rStarting Dynamixel control...\n\r");
 	dxl_main();
   while (1)
   {
@@ -153,10 +153,6 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
-
-  /** Macro to configure the PLL clock source
-  */
-  __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSI);
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
