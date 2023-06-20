@@ -76,6 +76,11 @@ uint8_t tof1[8];
 uint8_t tof2[8];
 uint8_t palmTOF;
 
+int32_t phal1[3];
+int32_t phal2[3];
+int32_t phal3[3];
+int32_t phal4[3];
+
 float force1[5];
 float force2[5];
 
@@ -675,7 +680,8 @@ void sendCAN(){
 int dxl_main(void)
 {
 	printf("\r\n--------MIT Hand Control Board Firmware--------\r\n");
-	printf("Version No: %.2f\r\n\n\n", VERSION_NUMBER);
+	printf("Version No: %.2f\r\n", VERSION_NUMBER);
+	printf("FINGER SENSOR DEBUGGING VERSION\r\n\n\n");
 	//Tx Headers
 	txHeader_fd_joints.Identifier = 0x01;
 	txHeader_fd_joints.IdType = FDCAN_STANDARD_ID;
@@ -745,22 +751,22 @@ int dxl_main(void)
 
 	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);//
 
-	while (!MODE_SELECTED){
-		HAL_Delay(500);
-		printf("Waiting for Mode Select..\n\r");
-		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
-	}
-	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-	printf("Mode Selected..\n\r");
-	HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
-
-	if (CURR_CONTROL) {
-		DXL_MODE = CURRENT_POS_CONTROL;
-		} else DXL_MODE = POSITION_CONTROL;
-
-	// Setup Routine for Dynamixels
-	printf("Setting up Dynamixel bus.\n\r");
-	Dynamixel_Startup_Routine();
+//	while (!MODE_SELECTED){
+//		HAL_Delay(500);
+//		printf("Waiting for Mode Select..\n\r");
+//		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+//	}
+//	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+//	printf("Mode Selected..\n\r");
+//	HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
+//
+//	if (CURR_CONTROL) {
+//		DXL_MODE = CURRENT_POS_CONTROL;
+//		} else DXL_MODE = POSITION_CONTROL;
+//
+//	// Setup Routine for Dynamixels
+//	printf("Setting up Dynamixel bus.\n\r");
+//	Dynamixel_Startup_Routine();
 
 //	if (CURR_CONTROL){
 //		for (int i=0; i<idLength; i++) {
@@ -833,14 +839,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 	if (htim->Instance==TIM2){
 //		printf("C\n\r");
 
-		updateBusses();
+//		updateBusses();
 
 	} else if (htim->Instance==TIM3){
 //		printf("S\n\r");
-		sendCAN();
+//		sendCAN();
+
+		// in this version...slowed down timer 3 interrupt and print sensor values
+
+
+
 	} else if (htim->Instance==TIM4){
 
 	}
+
 }
 
 
@@ -1004,6 +1016,36 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 //				tp_ct++;
 				palmTOF = sense_rx_buf[0];
 			}
+
+			// phalange IDs (TOF and FSR)
+			else if (id == CAN2_PHAL_1){
+				phal1[0] = sense_rx_buf[0]; // TOF
+				phal1[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2]; // FSR 1
+				phal1[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4]; // FSR 2
+			}
+			else if (id == CAN2_PHAL_2){
+				phal2[0] = sense_rx_buf[0];
+				phal2[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
+				phal2[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+			}
+			else if (id == CAN2_PHAL_3){
+				phal3[0] = sense_rx_buf[0];
+				phal3[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
+				phal3[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+			}
+			else if (id == CAN2_PHAL_4){
+				phal4[0] = sense_rx_buf[0];
+				phal4[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
+				phal4[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+			}
+			// pressure sensor message ids
+			else if (id == CAN2_RAW_BMP_1){ // TODO: fix this!
+				for(int i = 0;i<8;i++){
+					pressure_raw1[i] = sense_rx_buf[i];
+				}
+			}
+
+
 
 		}
 //	}
