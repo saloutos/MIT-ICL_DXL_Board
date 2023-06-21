@@ -1039,11 +1039,12 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 				phal4[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
 			}
 			// pressure sensor message ids
-			else if (id == CAN2_RAW_BMP_1){ // TODO: fix this!
-				for(int i = 0;i<8;i++){
-					pressure_raw1[i] = sense_rx_buf[i];
-				}
-			}
+			// TODO: fix this!
+//			else if (id == CAN2_RAW_BMP_1){
+//				for(int i = 0;i<8;i++){
+//					pressure_raw1[i] = sense_rx_buf[i];
+//				}
+//			}
 
 
 

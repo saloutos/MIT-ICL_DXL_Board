@@ -76,7 +76,8 @@ extern FDCAN_HandleTypeDef hfdcan2;
 #define CAN2_PHAL_2				12
 #define CAN2_PHAL_3				13
 #define CAN2_PHAL_4				14
-// pressure sensors
+
+// raw pressure sensors
 #define CAN2_RAW_BMP_1			15
 #define CAN2_RAW_BMP_2			16
 #define CAN2_RAW_BMP_3			17
