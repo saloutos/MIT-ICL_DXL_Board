@@ -717,7 +717,7 @@ int dxl_main(void)
 	sense_can_filt.FilterType = FDCAN_FILTER_RANGE;
 	sense_can_filt.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
 	sense_can_filt.FilterID1 = 0x05;
-	sense_can_filt.FilterID2 = 0x0A;
+	sense_can_filt.FilterID2 = 0x0E; // up to 0x0E for phalange sensors
 	sense_can_filt.RxBufferIndex = 0;
 
 	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sys_can_filt) != HAL_OK)
@@ -749,7 +749,7 @@ int dxl_main(void)
 	HAL_TIM_Base_Start(&htim5);
 	HAL_TIM_Base_Start(&htim1);
 
-	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);//
+//	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);//
 
 //	while (!MODE_SELECTED){
 //		HAL_Delay(500);
@@ -818,16 +818,16 @@ int dxl_main(void)
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
 
-//	int loop_count = 0;
+	int loop_count = 0;
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 	while (1)
 	{
-//		if(loop_count % 1000000 == 0){
+		if(loop_count % 1000000 == 0){
 //			printf("loop time: %lu \r\n",eval_time);
-//			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 //			printf("%lu, f1: %lu, f2: %lu, t1: %lu, t2: %lu, tp: %lu\r\n",cf_ct, f1_ct, f2_ct, t1_ct, t2_ct, tp_ct);
-//		}
-//		loop_count++;
+		}
+		loop_count++;
 	}
 }
 
@@ -843,11 +843,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 
 	} else if (htim->Instance==TIM3){
 //		printf("S\n\r");
-//		sendCAN();
+		sendCAN();
 
 		// in this version...slowed down timer 3 interrupt and print sensor values
-
-
+//		printf("Ph 1: %ld, %ld, %ld; Ph 2: %ld, %ld, %ld\n\r", phal1[0], phal1[1], phal1[2], phal2[0], phal2[1], phal2[2]);
+//		printf("Ph 3: %ld, %ld, %ld; Ph 4: %ld, %ld, %ld\n\r\n\r", phal3[0], phal3[1], phal3[2], phal4[0], phal4[1], phal4[2]);
 
 	} else if (htim->Instance==TIM4){
 
@@ -965,7 +965,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 	//		unpack_sensor(sense_rx_buf, rxMsg_sense.StdId);
 
 			uint8_t id = rxMsg_sense.Identifier;
-//			printf("%ud\n\r", id);
+//			printf("%d\n\r", id);
 
 			if (id == CAN2_FORCE_1){
 				// unpack forces and angles
@@ -1019,6 +1019,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 
 			// phalange IDs (TOF and FSR)
 			else if (id == CAN2_PHAL_1){
+
 				phal1[0] = sense_rx_buf[0]; // TOF
 				phal1[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2]; // FSR 1
 				phal1[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4]; // FSR 2
