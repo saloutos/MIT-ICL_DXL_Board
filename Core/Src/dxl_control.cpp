@@ -826,6 +826,7 @@ int dxl_main(void)
 //			printf("loop time: %lu \r\n",eval_time);
 			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 //			printf("%lu, f1: %lu, f2: %lu, t1: %lu, t2: %lu, tp: %lu\r\n",cf_ct, f1_ct, f2_ct, t1_ct, t2_ct, tp_ct);
+//			printf("Phalange data: %ld, %ld, %ld\n\r", phal1[0], phal1[1], phal1[2]);
 		}
 		loop_count++;
 	}
@@ -846,8 +847,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 		sendCAN();
 
 		// in this version...slowed down timer 3 interrupt and print sensor values
-//		printf("Ph 1: %ld, %ld, %ld; Ph 2: %ld, %ld, %ld\n\r", phal1[0], phal1[1], phal1[2], phal2[0], phal2[1], phal2[2]);
-//		printf("Ph 3: %ld, %ld, %ld; Ph 4: %ld, %ld, %ld\n\r\n\r", phal3[0], phal3[1], phal3[2], phal4[0], phal4[1], phal4[2]);
+		printf("Ph 1: %ld, %ld, %ld; Ph 2: %ld, %ld, %ld\n\r", phal1[0], phal1[1], phal1[2], phal2[0], phal2[1], phal2[2]);
+		printf("Ph 3: %ld, %ld, %ld; Ph 4: %ld, %ld, %ld\n\r\n\r", phal3[0], phal3[1], phal3[2], phal4[0], phal4[1], phal4[2]);
 
 	} else if (htim->Instance==TIM4){
 
