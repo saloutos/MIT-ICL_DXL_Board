@@ -19,6 +19,10 @@ extern uint8_t tof2[8];
 extern uint8_t palmTOF;
 extern float force1[5];
 extern float force2[5];
+extern int32_t phal1[3];
+extern int32_t phal2[3];
+extern int32_t phal3[3];
+extern int32_t phal4[3];
 
 /// CAN Reply Packet Structure ///
 /// 16 bit position, between -4*pi and 4*pi
@@ -132,6 +136,37 @@ void pack_reply48_sens(uint8_t *fdmsg, float * force_data_1, float * force_data_
 	fdmsg[25] = tof2[4];
 
     fdmsg[26] = palmTOF;
+
+    // phalange 1: 27, 28, 29, 30, 31
+    // phalange 2: 32, 33, 34, 35, 36
+    // phalange 3: 37, 38, 39, 40, 41
+    // phalange 4: 42, 43, 44, 45, 46
+    fdmsg[27] = phal1[0];
+    fdmsg[28] = phal1[1]>>8;
+    fdmsg[29] = phal1[1]&0xFF;
+    fdmsg[30] = phal1[2]>>8;
+	fdmsg[31] = phal1[2]&0xFF;
+
+	fdmsg[32] = phal2[0];
+	fdmsg[33] = phal2[1]>>8;
+	fdmsg[34] = phal2[1]&0xFF;
+	fdmsg[35] = phal2[2]>>8;
+	fdmsg[36] = phal2[2]&0xFF;
+
+	fdmsg[37] = phal3[0];
+	fdmsg[38] = phal3[1]>>8;
+	fdmsg[39] = phal3[1]&0xFF;
+	fdmsg[40] = phal3[2]>>8;
+	fdmsg[41] = phal3[2]&0xFF;
+
+	fdmsg[42] = phal4[0];
+	fdmsg[43] = phal4[1]>>8;
+	fdmsg[44] = phal4[1]&0xFF;
+	fdmsg[45] = phal4[2]>>8;
+	fdmsg[46] = phal4[2]&0xFF;
+
+    // byte 47 is free
+
 }
 
 // new function for just passing through force data from fingertip sensors

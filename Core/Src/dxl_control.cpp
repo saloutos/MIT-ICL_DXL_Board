@@ -15,7 +15,7 @@
 #define rad2pulse_t(x) uint32_t(rad2pulse(x))
 #define deg2rad(x) float((PI/180.0f)*x)
 #define pulse2deg(x) (360.0f/4096.0f)*(float)(x-2048.0f)
-#define VERSION_NUMBER 1.10f
+#define VERSION_NUMBER 1.20f
 
 uint32_t eval_time[3] = {0, 0, 0};
 uint32_t cycle_count= 0;
@@ -75,6 +75,11 @@ int32_t pressure_raw2[8];
 uint8_t tof1[8];
 uint8_t tof2[8];
 uint8_t palmTOF;
+
+int32_t phal1[3];
+int32_t phal2[3];
+int32_t phal3[3];
+int32_t phal4[3];
 
 float force1[5];
 float force2[5];
@@ -680,6 +685,7 @@ int dxl_main(void)
 {
 	printf("\r\n--------MIT Hand Control Board Firmware--------\r\n");
 	printf("Version No: %.2f\r\n\n\n", VERSION_NUMBER);
+
 	//Tx Headers
 	txHeader_fd_joints.Identifier = 0x01;
 	txHeader_fd_joints.IdType = FDCAN_STANDARD_ID;
@@ -715,7 +721,7 @@ int dxl_main(void)
 	sense_can_filt.FilterType = FDCAN_FILTER_RANGE;
 	sense_can_filt.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
 	sense_can_filt.FilterID1 = 0x05;
-	sense_can_filt.FilterID2 = 0x0A;
+	sense_can_filt.FilterID2 = 0x0E; // up to 0x0E for phalange sensors
 	sense_can_filt.RxBufferIndex = 0;
 
 	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sys_can_filt) != HAL_OK)
@@ -747,7 +753,7 @@ int dxl_main(void)
 	HAL_TIM_Base_Start(&htim5);
 	HAL_TIM_Base_Start(&htim1);
 
-	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);//
+	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);
 
 	while (!MODE_SELECTED){
 		HAL_Delay(500);
@@ -824,6 +830,7 @@ int dxl_main(void)
 //			printf("loop time: %lu \r\n",eval_time);
 //			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 //			printf("%lu, f1: %lu, f2: %lu, t1: %lu, t2: %lu, tp: %lu\r\n",cf_ct, f1_ct, f2_ct, t1_ct, t2_ct, tp_ct);
+//			printf("Phalange data: %ld, %ld, %ld\n\r", phal1[0], phal1[1], phal1[2]);
 //		}
 //		loop_count++;
 	}
@@ -842,9 +849,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 	} else if (htim->Instance==TIM3){
 //		printf("S\n\r");
 		sendCAN();
+
 	} else if (htim->Instance==TIM4){
 
 	}
+
 }
 
 
@@ -957,7 +966,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 	//		unpack_sensor(sense_rx_buf, rxMsg_sense.StdId);
 
 			uint8_t id = rxMsg_sense.Identifier;
-//			printf("%ud\n\r", id);
+//			printf("%d\n\r", id);
 
 			if (id == CAN2_FORCE_1){
 				// unpack forces and angles
@@ -1008,6 +1017,38 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 //				tp_ct++;
 				palmTOF = sense_rx_buf[0];
 			}
+
+			// phalange IDs (TOF and FSR)
+			else if (id == CAN2_PHAL_1){
+
+				phal1[0] = sense_rx_buf[0]; // TOF
+				phal1[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2]; // FSR 1
+				phal1[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4]; // FSR 2
+			}
+			else if (id == CAN2_PHAL_2){
+				phal2[0] = sense_rx_buf[0];
+				phal2[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
+				phal2[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+			}
+			else if (id == CAN2_PHAL_3){
+				phal3[0] = sense_rx_buf[0];
+				phal3[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
+				phal3[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+			}
+			else if (id == CAN2_PHAL_4){
+				phal4[0] = sense_rx_buf[0];
+				phal4[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
+				phal4[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+			}
+			// pressure sensor message ids
+			// TODO: fix this!
+//			else if (id == CAN2_RAW_BMP_1){
+//				for(int i = 0;i<8;i++){
+//					pressure_raw1[i] = sense_rx_buf[i];
+//				}
+//			}
+
+
 
 		}
 //	}

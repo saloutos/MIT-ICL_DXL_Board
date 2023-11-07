@@ -71,6 +71,18 @@ extern FDCAN_HandleTypeDef hfdcan2;
 #define CAN2_TOF_2              8
 #define CAN2_TOF_PALM           10
 
+// new sensor IDs
+#define CAN2_PHAL_1				11
+#define CAN2_PHAL_2				12
+#define CAN2_PHAL_3				13
+#define CAN2_PHAL_4				14
+
+// raw pressure sensors
+#define CAN2_RAW_BMP_1			15
+#define CAN2_RAW_BMP_2			16
+#define CAN2_RAW_BMP_3			17
+#define CAN2_RAW_BMP_4			18
+
 /// Value Limits ///
 #define P_MIN -12.5f
 #define P_MAX 12.5f
