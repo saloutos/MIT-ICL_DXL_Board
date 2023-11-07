@@ -15,7 +15,7 @@
 #define rad2pulse_t(x) uint32_t(rad2pulse(x))
 #define deg2rad(x) float((PI/180.0f)*x)
 #define pulse2deg(x) (360.0f/4096.0f)*(float)(x-2048.0f)
-#define VERSION_NUMBER 1.00f
+#define VERSION_NUMBER 1.10f
 
 uint32_t eval_time[3] = {0, 0, 0};
 uint32_t cycle_count= 0;
@@ -622,9 +622,13 @@ void updateBusses(){
 		kd_command[3] = 900;
 		kd_command[7] = 900;
 
-		kp_command[8] = 800;
+//		kp_command[8] = 800;
+//		kd_command[8] = 500;
+//		pos_command[8] = 2048;
+		kp_command[8] = 0;
 		kd_command[8] = 500;
-		pos_command[8] = 2048;
+		pos_command[8] = 0;
+		cur_command[8] = current_command[8];
 
 	}
 
