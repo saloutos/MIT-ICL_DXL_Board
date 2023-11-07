@@ -15,7 +15,7 @@
 #define rad2pulse_t(x) uint32_t(rad2pulse(x))
 #define deg2rad(x) float((PI/180.0f)*x)
 #define pulse2deg(x) (360.0f/4096.0f)*(float)(x-2048.0f)
-#define VERSION_NUMBER 1.10f
+#define VERSION_NUMBER 1.20f
 
 uint32_t eval_time[3] = {0, 0, 0};
 uint32_t cycle_count= 0;
@@ -684,8 +684,8 @@ void sendCAN(){
 int dxl_main(void)
 {
 	printf("\r\n--------MIT Hand Control Board Firmware--------\r\n");
-	printf("Version No: %.2f\r\n", VERSION_NUMBER);
-	printf("FINGER SENSOR DEBUGGING VERSION\r\n\n\n");
+	printf("Version No: %.2f\r\n\n\n", VERSION_NUMBER);
+
 	//Tx Headers
 	txHeader_fd_joints.Identifier = 0x01;
 	txHeader_fd_joints.IdType = FDCAN_STANDARD_ID;
@@ -753,24 +753,24 @@ int dxl_main(void)
 	HAL_TIM_Base_Start(&htim5);
 	HAL_TIM_Base_Start(&htim1);
 
-//	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);//
+	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);
 
-//	while (!MODE_SELECTED){
-//		HAL_Delay(500);
-//		printf("Waiting for Mode Select..\n\r");
-//		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
-//	}
-//	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-//	printf("Mode Selected..\n\r");
-//	HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
-//
-//	if (CURR_CONTROL) {
-//		DXL_MODE = CURRENT_POS_CONTROL;
-//		} else DXL_MODE = POSITION_CONTROL;
-//
-//	// Setup Routine for Dynamixels
-//	printf("Setting up Dynamixel bus.\n\r");
-//	Dynamixel_Startup_Routine();
+	while (!MODE_SELECTED){
+		HAL_Delay(500);
+		printf("Waiting for Mode Select..\n\r");
+		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+	}
+	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+	printf("Mode Selected..\n\r");
+	HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
+
+	if (CURR_CONTROL) {
+		DXL_MODE = CURRENT_POS_CONTROL;
+		} else DXL_MODE = POSITION_CONTROL;
+
+	// Setup Routine for Dynamixels
+	printf("Setting up Dynamixel bus.\n\r");
+	Dynamixel_Startup_Routine();
 
 //	if (CURR_CONTROL){
 //		for (int i=0; i<idLength; i++) {
@@ -822,17 +822,17 @@ int dxl_main(void)
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
 
-	int loop_count = 0;
+//	int loop_count = 0;
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 	while (1)
 	{
-		if(loop_count % 1000000 == 0){
+//		if(loop_count % 1000000 == 0){
 //			printf("loop time: %lu \r\n",eval_time);
-			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+//			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 //			printf("%lu, f1: %lu, f2: %lu, t1: %lu, t2: %lu, tp: %lu\r\n",cf_ct, f1_ct, f2_ct, t1_ct, t2_ct, tp_ct);
 //			printf("Phalange data: %ld, %ld, %ld\n\r", phal1[0], phal1[1], phal1[2]);
-		}
-		loop_count++;
+//		}
+//		loop_count++;
 	}
 }
 
@@ -844,15 +844,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 	if (htim->Instance==TIM2){
 //		printf("C\n\r");
 
-//		updateBusses();
+		updateBusses();
 
 	} else if (htim->Instance==TIM3){
 //		printf("S\n\r");
 		sendCAN();
-
-		// in this version...slowed down timer 3 interrupt and print sensor values
-		printf("Ph 1: %ld, %ld, %ld; Ph 2: %ld, %ld, %ld\n\r", phal1[0], phal1[1], phal1[2], phal2[0], phal2[1], phal2[2]);
-		printf("Ph 3: %ld, %ld, %ld; Ph 4: %ld, %ld, %ld\n\r\n\r", phal3[0], phal3[1], phal3[2], phal4[0], phal4[1], phal4[2]);
 
 	} else if (htim->Instance==TIM4){
 
