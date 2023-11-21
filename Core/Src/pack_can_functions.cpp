@@ -246,7 +246,7 @@ void pack_tof_reply(uint8_t * msg, uint8_t finger){
 		msg[2] = tof1[2];
 		msg[3] = tof1[3];
 		msg[4] = tof1[4];
-		msg[5] = palmTOF;
+		msg[5] = palm[0];
     } else if (finger==1){
 		msg[0] = tof2[0];
 		msg[1] = tof2[1];

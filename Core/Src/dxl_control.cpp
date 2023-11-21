@@ -31,6 +31,7 @@ uint32_t ct[6];
 // System Control Mode
 volatile bool CURR_CONTROL = true;
 volatile bool MODE_SELECTED = false;
+volatile bool SENSOR_DEBUG = false;
 uint8_t DXL_MODE;
 
 // Initialize CAN FD
@@ -753,24 +754,28 @@ int dxl_main(void)
 	HAL_TIM_Base_Start(&htim5);
 	HAL_TIM_Base_Start(&htim1);
 
-	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);
+	if (!SENSOR_DEBUG){
+		HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);
 
-	while (!MODE_SELECTED){
-		HAL_Delay(500);
-		printf("Waiting for Mode Select..\n\r");
-		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+		while (!MODE_SELECTED){
+			HAL_Delay(500);
+			printf("Waiting for Mode Select..\n\r");
+			HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+		}
+		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+		printf("Mode Selected..\n\r");
+		HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
+
+		if (CURR_CONTROL) {
+			DXL_MODE = CURRENT_POS_CONTROL;
+			} else DXL_MODE = POSITION_CONTROL;
+
+		// Setup Routine for Dynamixels
+		printf("Setting up Dynamixel bus.\n\r");
+		Dynamixel_Startup_Routine();
+	} else {
+		printf("Starting in sensor debug mode.\n\r");
 	}
-	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-	printf("Mode Selected..\n\r");
-	HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
-
-	if (CURR_CONTROL) {
-		DXL_MODE = CURRENT_POS_CONTROL;
-		} else DXL_MODE = POSITION_CONTROL;
-
-	// Setup Routine for Dynamixels
-	printf("Setting up Dynamixel bus.\n\r");
-	Dynamixel_Startup_Routine();
 
 //	if (CURR_CONTROL){
 //		for (int i=0; i<idLength; i++) {
@@ -843,12 +848,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {
 	if (htim->Instance==TIM2){
 //		printf("C\n\r");
-
-		updateBusses();
+		if(!SENSOR_DEBUG){
+			updateBusses();
+		}
 
 	} else if (htim->Instance==TIM3){
 //		printf("S\n\r");
 		sendCAN();
+		if(SENSOR_DEBUG){
+			// print sensor data
+			HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+			printf("Sensors: %d, %d, %d\n\r", palm[0], palm[1], palm[2]);
+		}
 
 	} else if (htim->Instance==TIM4){
 
