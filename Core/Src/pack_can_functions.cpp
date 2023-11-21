@@ -16,13 +16,13 @@ extern float dxl_kp[9];
 extern float dxl_kd[9];
 extern uint8_t tof1[8];
 extern uint8_t tof2[8];
-extern uint8_t palmTOF;
 extern float force1[5];
 extern float force2[5];
-extern int32_t phal1[3];
-extern int32_t phal2[3];
-extern int32_t phal3[3];
-extern int32_t phal4[3];
+extern uint16_t palm[3];
+extern uint16_t phal1[3];
+extern uint16_t phal2[3];
+extern uint16_t phal3[3];
+extern uint16_t phal4[3];
 
 /// CAN Reply Packet Structure ///
 /// 16 bit position, between -4*pi and 4*pi
@@ -135,37 +135,39 @@ void pack_reply48_sens(uint8_t *fdmsg, float * force_data_1, float * force_data_
 	fdmsg[24] = tof2[3];
 	fdmsg[25] = tof2[4];
 
-    fdmsg[26] = palmTOF;
+	// TODO: 12 bits per FSR message, so each sensor should take 8+12+12=32bits=4bytes
 
-    // phalange 1: 27, 28, 29, 30, 31
-    // phalange 2: 32, 33, 34, 35, 36
-    // phalange 3: 37, 38, 39, 40, 41
-    // phalange 4: 42, 43, 44, 45, 46
-    fdmsg[27] = phal1[0];
-    fdmsg[28] = phal1[1]>>8;
-    fdmsg[29] = phal1[1]&0xFF;
-    fdmsg[30] = phal1[2]>>8;
-	fdmsg[31] = phal1[2]&0xFF;
+	// palm: 26, 27, 28, 29
+    fdmsg[26] = palm[0];
+    fdmsg[27] = palm[1]>>4; // 8 msbs of FSR1
+	fdmsg[28] = ((palm[1]&0x0F)<<4)|((palm[2]>>8)); // 4 lsbs of FSR1 and 4 msbs of FSR2
+	fdmsg[29] = palm[2]&0xFF; // 8 lsbs of FSR2
 
-	fdmsg[32] = phal2[0];
-	fdmsg[33] = phal2[1]>>8;
-	fdmsg[34] = phal2[1]&0xFF;
-	fdmsg[35] = phal2[2]>>8;
-	fdmsg[36] = phal2[2]&0xFF;
+    // phalange 1: 30, 31, 32, 33
+    // phalange 2: 34, 35, 36, 37
+    // phalange 3: 38, 39, 40, 41
+    // phalange 4: 42, 43, 44, 45
+    fdmsg[30] = phal1[0];
+    fdmsg[31] = phal1[1]>>4; // 8 msbs of FSR1
+	fdmsg[32] = ((phal1[1]&0x0F)<<4)|((phal1[2]>>8)); // 4 lsbs of FSR1 and 4 msbs of FSR2
+	fdmsg[33] = phal1[2]&0xFF; // 8 lsbs of FSR2
 
-	fdmsg[37] = phal3[0];
-	fdmsg[38] = phal3[1]>>8;
-	fdmsg[39] = phal3[1]&0xFF;
-	fdmsg[40] = phal3[2]>>8;
-	fdmsg[41] = phal3[2]&0xFF;
+	fdmsg[34] = phal2[0];
+	fdmsg[35] = phal2[1]>>4; // 8 msbs of FSR1
+	fdmsg[36] = ((phal2[1]&0x0F)<<4)|((phal2[2]>>8)); // 4 lsbs of FSR1 and 4 msbs of FSR2
+	fdmsg[37] = phal2[2]&0xFF; // 8 lsbs of FSR2
+
+	fdmsg[38] = phal3[0];
+	fdmsg[39] = phal3[1]>>4; // 8 msbs of FSR1
+	fdmsg[40] = ((phal3[1]&0x0F)<<4)|((phal3[2]>>8)); // 4 lsbs of FSR1 and 4 msbs of FSR2
+	fdmsg[41] = phal3[2]&0xFF; // 8 lsbs of FSR2
 
 	fdmsg[42] = phal4[0];
-	fdmsg[43] = phal4[1]>>8;
-	fdmsg[44] = phal4[1]&0xFF;
-	fdmsg[45] = phal4[2]>>8;
-	fdmsg[46] = phal4[2]&0xFF;
+	fdmsg[43] = phal4[1]>>4; // 8 msbs of FSR1
+	fdmsg[44] = ((phal4[1]&0x0F)<<4)|((phal4[2]>>8)); // 4 lsbs of FSR1 and 4 msbs of FSR2
+	fdmsg[45] = phal4[2]&0xFF; // 8 lsbs of FSR2
 
-    // byte 47 is free
+    // bytes 46,47 are free
 
 }
 

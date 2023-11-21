@@ -74,12 +74,12 @@ int32_t pressure_raw1[8];
 int32_t pressure_raw2[8];
 uint8_t tof1[8];
 uint8_t tof2[8];
-uint8_t palmTOF;
 
-int32_t phal1[3];
-int32_t phal2[3];
-int32_t phal3[3];
-int32_t phal4[3];
+uint16_t palm[3];
+uint16_t phal1[3];
+uint16_t phal2[3];
+uint16_t phal3[3];
+uint16_t phal4[3];
 
 float force1[5];
 float force2[5];
@@ -1013,32 +1013,33 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 					tof2[i] = sense_rx_buf[i];
 				}
 			}
+
 			else if (id == CAN2_TOF_PALM){ // TODO: change this!!!
-//				tp_ct++;
-				palmTOF = sense_rx_buf[0];
+				palm[0] = sense_rx_buf[0];
+				palm[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+				palm[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
 			}
 
 			// phalange IDs (TOF and FSR)
 			else if (id == CAN2_PHAL_1){
-
 				phal1[0] = sense_rx_buf[0]; // TOF
-				phal1[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2]; // FSR 1
-				phal1[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4]; // FSR 2
+				palm[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+				palm[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
 			}
 			else if (id == CAN2_PHAL_2){
 				phal2[0] = sense_rx_buf[0];
-				phal2[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
-				phal2[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+				phal2[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+				phal2[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
 			}
 			else if (id == CAN2_PHAL_3){
 				phal3[0] = sense_rx_buf[0];
-				phal3[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
-				phal3[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+				phal3[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+				phal3[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
 			}
 			else if (id == CAN2_PHAL_4){
 				phal4[0] = sense_rx_buf[0];
-				phal4[1] = (sense_rx_buf[1]<<8)|sense_rx_buf[2];
-				phal4[2] = (sense_rx_buf[3]<<8)|sense_rx_buf[4];
+				phal4[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+				phal4[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
 			}
 			// pressure sensor message ids
 			// TODO: fix this!
