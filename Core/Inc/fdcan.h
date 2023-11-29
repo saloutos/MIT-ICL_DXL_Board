@@ -69,7 +69,7 @@ extern FDCAN_HandleTypeDef hfdcan2;
 #define CAN2_FORCE_2            6
 #define CAN2_TOF_1              7
 #define CAN2_TOF_2              8
-#define CAN2_TOF_PALM           10
+#define CAN2_TOF_PALM           9
 
 // new sensor IDs
 #define CAN2_PHAL_1				11

@@ -15,7 +15,7 @@
 #define rad2pulse_t(x) uint32_t(rad2pulse(x))
 #define deg2rad(x) float((PI/180.0f)*x)
 #define pulse2deg(x) (360.0f/4096.0f)*(float)(x-2048.0f)
-#define VERSION_NUMBER 1.20f
+#define VERSION_NUMBER 1.21f
 
 uint32_t eval_time[3] = {0, 0, 0};
 uint32_t cycle_count= 0;
@@ -771,8 +771,13 @@ int dxl_main(void)
 			} else DXL_MODE = POSITION_CONTROL;
 
 		// Setup Routine for Dynamixels
-		printf("Setting up Dynamixel bus.\n\r");
-		Dynamixel_Startup_Routine();
+		if (!SENSOR_DEBUG) {
+			printf("Setting up Dynamixel bus.\n\r");
+			Dynamixel_Startup_Routine();
+		} else {
+			printf("Starting in sensor debug mode.\n\r");
+		}
+
 	} else {
 		printf("Starting in sensor debug mode.\n\r");
 	}
@@ -827,17 +832,28 @@ int dxl_main(void)
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
 
-//	int loop_count = 0;
+	int loop_count = 0;
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 	while (1)
 	{
-//		if(loop_count % 1000000 == 0){
-//			printf("loop time: %lu \r\n",eval_time);
-//			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-//			printf("%lu, f1: %lu, f2: %lu, t1: %lu, t2: %lu, tp: %lu\r\n",cf_ct, f1_ct, f2_ct, t1_ct, t2_ct, tp_ct);
-//			printf("Phalange data: %ld, %ld, %ld\n\r", phal1[0], phal1[1], phal1[2]);
-//		}
-//		loop_count++;
+		// print sensor data in debug mode
+		if (SENSOR_DEBUG) {
+			if(loop_count % 10000000 == 0){
+//				printf("Loop time: %u \r\n",eval_time);
+				HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+				printf("Left finger force: %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n\r", force1[0], force1[1], force1[2], force1[3], force1[4]);
+				printf("Left finger TOF: %d, %d, %d, %d, %d\n\r", tof1[0], tof1[1], tof1[2], tof1[3], tof1[4]);
+				printf("Right finger force: %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n\r", force2[0], force2[1], force2[2], force2[3], force2[4]);
+				printf("Right finger TOF: %d, %d, %d, %d, %d\n\r", tof2[0], tof2[1], tof2[2], tof2[3], tof2[4]);
+				printf("Phalange 1: %d, %d, %d\n\r", phal1[0], phal1[1], phal1[2]);
+				printf("Phalange 2: %d, %d, %d\n\r", phal2[0], phal2[1], phal2[2]);
+				printf("Phalange 3: %d, %d, %d\n\r", phal3[0], phal3[1], phal3[2]);
+				printf("Phalange 4: %d, %d, %d\n\r", phal4[0], phal4[1], phal4[2]);
+				printf("Palm: %d, %d, %d\n\r", palm[0], palm[1], palm[2]);
+				printf("\n\r");
+			}
+			loop_count++;
+		}
 	}
 }
 
@@ -855,11 +871,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 	} else if (htim->Instance==TIM3){
 //		printf("S\n\r");
 		sendCAN();
-		if(SENSOR_DEBUG){
-			// print sensor data
-			HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
-			printf("Sensors: %d, %d, %d\n\r", palm[0], palm[1], palm[2]);
-		}
 
 	} else if (htim->Instance==TIM4){
 
@@ -957,10 +968,17 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 				if(sys_rx_buf[7] == 0xFC){
 					CURR_CONTROL = true;
 					MODE_SELECTED = true;
+					SENSOR_DEBUG = false;
 				}
 				else if (sys_rx_buf[7] == 0xFD){
 					CURR_CONTROL = false;
 					MODE_SELECTED = true;
+					SENSOR_DEBUG = false;
+				}
+				else if (sys_rx_buf[7] == 0xFB){
+					CURR_CONTROL = false;
+					MODE_SELECTED = true;
+					SENSOR_DEBUG = true;
 				}
 			}
 	}
@@ -1034,8 +1052,8 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1I
 			// phalange IDs (TOF and FSR)
 			else if (id == CAN2_PHAL_1){
 				phal1[0] = sense_rx_buf[0]; // TOF
-				palm[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
-				palm[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
+				phal1[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+				phal1[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
 			}
 			else if (id == CAN2_PHAL_2){
 				phal2[0] = sense_rx_buf[0];
