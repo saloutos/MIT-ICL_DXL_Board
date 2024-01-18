@@ -29,9 +29,10 @@ uint32_t cf_ct = 0;
 uint32_t ct[6];
 
 // System Control Mode
-volatile bool CURR_CONTROL = true;
+volatile bool CURR_CONTROL = true; // false is position control mode
 volatile bool MODE_SELECTED = false;
 volatile bool SENSOR_DEBUG = false;
+volatile bool HAND_RESET = false;
 uint8_t DXL_MODE;
 
 // Initialize CAN FD
@@ -507,6 +508,7 @@ void SetFullControlCommands_DMA()
 void updateBusses(){
 //	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
 //	__HAL_TIM_SET_COUNTER(&htim5,0);
+
 	// update busses vars
 	double jointAngles1[4];
 	double jointVelocities1[4];
@@ -520,61 +522,57 @@ void updateBusses(){
 	GetBulkData_DMA();
 	eval_time[0] = __HAL_TIM_GET_COUNTER(&htim1);
 	__HAL_TIM_SET_COUNTER(&htim1,0);
+
+	for(int i=0; i<8; i++){
+		velData[i] = rpm_to_rads*(float)dxl_velocity[i];
+		motorTorques[i] = Kt*0.001f*(float)dxl_current[i];
+	}
+
+	// printf("Transforms...");
+	InverseActuatorTransformationL(jointAngles1, dxl_position[0], dxl_position[1], dxl_position[2], dxl_position[3]);
+	InverseActuatorVelocityTransformationL(jointVelocities1, velData[0], velData[1], velData[2], velData[3]);
+	InverseActuatorTransformationR(jointAngles2, dxl_position[4], dxl_position[5], dxl_position[6], dxl_position[7]);
+	InverseActuatorVelocityTransformationR(jointVelocities2, velData[4], velData[5], velData[6], velData[7]);
+
+	for(int i=0; i<4; i++){
+		// convert from actuator torques to joint torques: tauJ = Jact^T * tauM
+		jointTorques1[i] = JactL[0][i]*motorTorques[0] + JactL[1][i]*motorTorques[1] + JactL[2][i]*motorTorques[2] + JactL[3][i]*motorTorques[3];
+		jointTorques2[i] = JactR[0][i]*motorTorques[4] + JactR[1][i]*motorTorques[5] + JactR[2][i]*motorTorques[6] + JactR[3][i]*motorTorques[7];
+	}
+
+	// printf("Current values...");
+	for(int i=0; i<3; i++){
+		currentPos[i] = (float)jointAngles1[i];
+		currentVel[i] = (float)jointVelocities1[i];
+		currentPos[3+i] = (float)jointAngles2[i];
+		currentVel[3+i] = (float)jointVelocities2[i];
+		currentCur[i] = 0.001f*(float)dxl_current[i];
+		currentCur[3+i] = 0.001f*(float)dxl_current[4+i];
+		currentJointTau[i] = (float)jointTorques1[i];
+		currentJointTau[3+i] = (float)jointTorques2[i];
+	}
+	currentPos[6] = (float)jointAngles1[3];
+	currentVel[6] = (float)jointVelocities1[3];
+	currentPos[7] = (float)jointAngles2[3];
+	currentVel[7] = (float)jointVelocities2[3];
+	currentCur[6] = 0.001f*(float)dxl_current[3];
+	currentCur[7] = 0.001f*(float)dxl_current[7];
+	currentJointTau[6] = (float)jointTorques1[3];
+	currentJointTau[7] = (float)jointTorques2[3];
+
+	currentPos[8] = (float(dxl_position[8])-2048.0f)*((2*PI/4096.0f)); // (float(x)-2048) * ((2*PI)/4096.0f)
+	currentVel[8] = rpm_to_rads*(float)dxl_velocity[8];
+	currentCur[8] = 0.001f*(float)dxl_current[8];
+	currentJointTau[8] = Kt_WR*0.001f*(float)dxl_current[8];
+
+	// calculate desired joint torques here, torques are in Nm
+	// printf("Desired joint torques...");
+	// TODO: could initialize these values on startup to save some time?
+	float pos_act[9] = {(float)jointAngles1[0], (float)jointAngles1[1], (float)jointAngles1[2], (float)jointAngles1[3], (float)jointAngles2[0], (float)jointAngles2[1], (float)jointAngles2[2], (float)jointAngles2[3], (float)currentPos[8]};
+	float vel_act[9] = {(float)jointVelocities1[0], (float)jointVelocities1[1], (float)jointVelocities1[2], (float)jointVelocities1[3], (float)jointVelocities2[0], (float)jointVelocities2[1], (float)jointVelocities2[2], (float)jointVelocities2[3], (float)currentVel[8]};
+
+	// run control (depending on control mode)
 	if (CURR_CONTROL){
-		for(int i=0; i<8; i++){
-			velData[i] = rpm_to_rads*(float)dxl_velocity[i];
-			motorTorques[i] = Kt*0.001f*(float)dxl_current[i];
-		}
-
-		// printf("Transforms...");
-		InverseActuatorTransformationL(jointAngles1, dxl_position[0], dxl_position[1], dxl_position[2], dxl_position[3]);
-		InverseActuatorVelocityTransformationL(jointVelocities1, velData[0], velData[1], velData[2], velData[3]);
-		InverseActuatorTransformationR(jointAngles2, dxl_position[4], dxl_position[5], dxl_position[6], dxl_position[7]);
-		InverseActuatorVelocityTransformationR(jointVelocities2, velData[4], velData[5], velData[6], velData[7]);
-
-		for(int i=0; i<4; i++){
-			// convert from actuator torques to joint torques: tauJ = Jact^T * tauM
-			jointTorques1[i] = JactL[0][i]*motorTorques[0] + JactL[1][i]*motorTorques[1] + JactL[2][i]*motorTorques[2] + JactL[3][i]*motorTorques[3];
-			jointTorques2[i] = JactR[0][i]*motorTorques[4] + JactR[1][i]*motorTorques[5] + JactR[2][i]*motorTorques[6] + JactR[3][i]*motorTorques[7];
-		}
-
-		// printf("Current values...");
-		for(int i=0; i<3; i++){
-			currentPos[i] = (float)jointAngles1[i];
-			currentVel[i] = (float)jointVelocities1[i];
-			currentPos[3+i] = (float)jointAngles2[i];
-			currentVel[3+i] = (float)jointVelocities2[i];
-			currentCur[i] = 0.001f*(float)dxl_current[i];
-			currentCur[3+i] = 0.001f*(float)dxl_current[4+i];
-			currentJointTau[i] = (float)jointTorques1[i];
-			currentJointTau[3+i] = (float)jointTorques2[i];
-		}
-		currentPos[6] = (float)jointAngles1[3];
-		currentVel[6] = (float)jointVelocities1[3];
-		currentPos[7] = (float)jointAngles2[3];
-		currentVel[7] = (float)jointVelocities2[3];
-		currentCur[6] = 0.001f*(float)dxl_current[3];
-		currentCur[7] = 0.001f*(float)dxl_current[7];
-		currentJointTau[6] = (float)jointTorques1[3];
-		currentJointTau[7] = (float)jointTorques2[3];
-
-		currentPos[8] = (float(dxl_position[8])-2048.0f)*((2*PI/4096.0f)); // (float(x)-2048) * ((2*PI)/4096.0f)
-		currentVel[8] = rpm_to_rads*(float)dxl_velocity[8];
-		currentCur[8] = 0.001f*(float)dxl_current[8];
-		currentJointTau[8] = Kt_WR*0.001f*(float)dxl_current[8];
-
-		// calculate desired joint torques here, torques are in Nm
-		// printf("Desired joint torques...");
-		// TODO: could initialize these values on startup to save some time?
-		float pos_act[9] = {(float)jointAngles1[0], (float)jointAngles1[1], (float)jointAngles1[2], (float)jointAngles1[3], (float)jointAngles2[0], (float)jointAngles2[1], (float)jointAngles2[2], (float)jointAngles2[3], (float)currentPos[8]};
-		float vel_act[9] = {(float)jointVelocities1[0], (float)jointVelocities1[1], (float)jointVelocities1[2], (float)jointVelocities1[3], (float)jointVelocities2[0], (float)jointVelocities2[1], (float)jointVelocities2[2], (float)jointVelocities2[3], (float)currentVel[8]};
-
-//		float pos_des[9] = {dxl_pos_des[0], dxl_pos_des[1], dxl_pos_des[2], dxl_pos_des[3], dxl_pos_des[4], dxl_pos_des[5], dxl_pos_des[6],  dxl_pos_des[7], dxl_pos_des[8]};
-//		float vel_des[9] = {dxl_vel_des[0], dxl_vel_des[1], dxl_vel_des[2],  dxl_vel_des[3], dxl_vel_des[4], dxl_vel_des[5], dxl_vel_des[6],  dxl_vel_des[7], dxl_vel_des[8]};
-//
-//		float KP_des[9] = {dxl_kp[0],dxl_kp[1],dxl_kp[2], dxl_kp[3], dxl_kp[4], dxl_kp[5], dxl_kp[6], dxl_kp[7], dxl_kp[8]}; // 0.8f*1.76f
-//		float KD_des[9] = {dxl_kd[0],dxl_kd[1],dxl_kd[2], dxl_kd[3], dxl_kd[4], dxl_kd[5], dxl_kd[6],dxl_kd[7], dxl_kd[8]}; // 0.6f*0.026f
-//		float tau_ff_des[9] = {dxl_tff_des[0],dxl_tff_des[1],dxl_tff_des[2],dxl_tff_des[3],dxl_tff_des[4],dxl_tff_des[5],dxl_tff_des[6],dxl_tff_des[7], dxl_tff_des[8] };
 
 		float desired_joint_torques[9];
 		float desired_actuator_torques[9];
@@ -610,7 +608,6 @@ void updateBusses(){
 		desired_current[8] = fmaxf(fminf( Ktinv_WR*desired_actuator_torques[8], current_limit_WR), -current_limit_WR );
 		current_command[8] = (int16_t)(1000.0f*desired_current[8]);
 
-
     // 1. obtain desired actuator positions, velocities, and torques from joint data
     // 2. convert gains, torques to correct units
 		for (int i=0; i<8; i++){
@@ -633,37 +630,57 @@ void updateBusses(){
 
 	}
 
-    else {
-		if (time_step % 4000==0) {
-			if (freq1 < max_freq && updown) {
-				freq1++;
-			}
-			else {
-				updown = false;
-				freq1--;
-				if (freq1 < 2) {
-				updown = true;
-				}
-			}
-			freq2 = freq1 / 2.0f;
+    else { // POSITION CONTROL DEMO
+//		if (time_step % 4000==0) {
+//			if (freq1 < max_freq && updown) {
+//				freq1++;
+//			}
+//			else {
+//				updown = false;
+//				freq1--;
+//				if (freq1 < 2) {
+//				updown = true;
+//				}
+//			}
+//			freq2 = freq1 / 2.0f;
+//		}
+//		ActuatorTransformationL(rtPos_L, 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), (amp2)*(sinf(freq2*PI*(float)(dt*time_step))));
+//		ActuatorTransformationR(rtPos_R, -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -(amp2)*(sinf(freq2*PI*(float)(dt*time_step))));
+//		time_step++;
+//		for(int k = 0; k<4; k++){
+//			trajPos[k] = rtPos_L[k];
+//			trajPos[k+4] = rtPos_R[k];
+//		}
+//		trajPos[8] = 2048;
+//		for (int i=0; i<9; i++){
+//			pos_command[i] = trajPos[i];
+//			vel_command[i] = 0;
+//			cur_command[i] = 0;
+//			kp_command[i] = 800;
+//			kd_command[i] = 0;
+//		}
+
+		// alternative, where desired positions are sent over CAN
+		ActuatorTransformationL(rtPos_L, dxl_pos_des[0], dxl_pos_des[1], dxl_pos_des[2], dxl_pos_des[3]);
+		ActuatorTransformationR(rtPos_R, dxl_pos_des[4], dxl_pos_des[5], dxl_pos_des[6], dxl_pos_des[7]);
+		for(int k = 0; k<4; k++){
+			trajPos[k] = rtPos_L[k];
+			trajPos[k+4] = rtPos_R[k];
 		}
-	ActuatorTransformationL(rtPos_L, 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), (amp2)*(sinf(freq2*PI*(float)(dt*time_step))));
-	ActuatorTransformationR(rtPos_R, -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -(amp2)*(sinf(freq2*PI*(float)(dt*time_step))));
-	time_step++;
-	for(int k = 0; k<4; k++){
-		trajPos[k] = rtPos_L[k];
-		trajPos[k+4] = rtPos_R[k];
-	}
-		trajPos[8] = 2048;
-    	for (int i=0; i<9; i++){
+		trajPos[8] = rad2pulse(dxl_pos_des[8]);
+		for (int i=0; i<9; i++){
 			pos_command[i] = trajPos[i];
 			vel_command[i] = 0;
 			cur_command[i] = 0;
 			kp_command[i] = 800;
 			kd_command[i] = 0;
 		}
+
+
     }
 	eval_time[1] = __HAL_TIM_GET_COUNTER(&htim1);
+
+	// send commands
 	__HAL_TIM_SET_COUNTER(&htim1,0);
     SetFullControlCommands_DMA();
     eval_time[2] = __HAL_TIM_GET_COUNTER(&htim1);
@@ -754,33 +771,29 @@ int dxl_main(void)
 	HAL_TIM_Base_Start(&htim5);
 	HAL_TIM_Base_Start(&htim1);
 
-	if (!SENSOR_DEBUG){
-		HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);
+	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);
 
-		while (!MODE_SELECTED){
-			HAL_Delay(500);
-			printf("Waiting for Mode Select..\n\r");
-			HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
-		}
-		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-		printf("Mode Selected..\n\r");
-		HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
+	while (!MODE_SELECTED){
+		HAL_Delay(500);
+		printf("Waiting for Mode Select..\n\r");
+		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+	}
+	HAND_RESET = false; // this flag doesn't need to be set this time
+	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+	printf("Mode Selected..\n\r");
+	HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
 
-		if (CURR_CONTROL) {
-			DXL_MODE = CURRENT_POS_CONTROL;
-			} else DXL_MODE = POSITION_CONTROL;
+	if (CURR_CONTROL) {
+		DXL_MODE = CURRENT_POS_CONTROL;
+		} else DXL_MODE = POSITION_CONTROL;
 
-		// Setup Routine for Dynamixels
-		if (!SENSOR_DEBUG) {
-			printf("Setting up Dynamixel bus.\n\r");
-			Dynamixel_Startup_Routine();
-		} else {
-			printf("Starting in sensor debug mode.\n\r");
-		}
-
-	} else {
+	// Setup Routine for Dynamixels
+	printf("Setting up Dynamixel bus.\n\r");
+	Dynamixel_Startup_Routine(SENSOR_DEBUG);
+	if (SENSOR_DEBUG) {
 		printf("Starting in sensor debug mode.\n\r");
 	}
+
 
 //	if (CURR_CONTROL){
 //		for (int i=0; i<idLength; i++) {
@@ -826,7 +839,7 @@ int dxl_main(void)
 	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);// Initialize CAN1 Rx0 Interrupt
 	HAL_FDCAN_ActivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE,0);// Initialize CAN2 Rx1 Interrupt
 
-	// Enable Timer Interrupts
+	// enable Timer Interrupts
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
 	HAL_NVIC_EnableIRQ(TIM3_IRQn);
 	HAL_TIM_Base_Start_IT(&htim2);
@@ -838,22 +851,61 @@ int dxl_main(void)
 	{
 		// print sensor data in debug mode
 		if (SENSOR_DEBUG) {
-			if(loop_count % 10000000 == 0){
+			if(loop_count % 1000000 == 0){
 //				printf("Loop time: %u \r\n",eval_time);
 				HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-				printf("Left finger force: %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n\r", force1[0], force1[1], force1[2], force1[3], force1[4]);
-				printf("Left finger TOF: %d, %d, %d, %d, %d\n\r", tof1[0], tof1[1], tof1[2], tof1[3], tof1[4]);
-				printf("Right finger force: %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n\r", force2[0], force2[1], force2[2], force2[3], force2[4]);
-				printf("Right finger TOF: %d, %d, %d, %d, %d\n\r", tof2[0], tof2[1], tof2[2], tof2[3], tof2[4]);
-				printf("Phalange 1: %d, %d, %d\n\r", phal1[0], phal1[1], phal1[2]);
-				printf("Phalange 2: %d, %d, %d\n\r", phal2[0], phal2[1], phal2[2]);
-				printf("Phalange 3: %d, %d, %d\n\r", phal3[0], phal3[1], phal3[2]);
-				printf("Phalange 4: %d, %d, %d\n\r", phal4[0], phal4[1], phal4[2]);
-				printf("Palm: %d, %d, %d\n\r", palm[0], palm[1], palm[2]);
-				printf("\n\r");
+//				printf("Left finger force: %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n\r", force1[0], force1[1], force1[2], force1[3], force1[4]);
+//				printf("Left finger TOF: %d, %d, %d, %d, %d\n\r", tof1[0], tof1[1], tof1[2], tof1[3], tof1[4]);
+//				printf("Right finger force: %3.3f, %3.3f, %3.3f, %3.3f, %3.3f\n\r", force2[0], force2[1], force2[2], force2[3], force2[4]);
+//				printf("Right finger TOF: %d, %d, %d, %d, %d\n\r", tof2[0], tof2[1], tof2[2], tof2[3], tof2[4]);
+//				printf("Phalange 1: %d, %d, %d\n\r", phal1[0], phal1[1], phal1[2]);
+//				printf("Phalange 2: %d, %d, %d\n\r", phal2[0], phal2[1], phal2[2]);
+//				printf("Phalange 3: %d, %d, %d\n\r", phal3[0], phal3[1], phal3[2]);
+//				printf("Phalange 4: %d, %d, %d\n\r", phal4[0], phal4[1], phal4[2]);
+//				printf("Test: %d, %d, %d\n\r", palm[0], palm[1], palm[2]);
+//				printf("\n\r");
 			}
 			loop_count++;
 		}
+		// check for gripper reset flag
+		if (HAND_RESET){
+			// deactivate all of the interrupts
+			// disable CAN Interrupts
+			HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);// Initialize CAN1 Rx0 Interrupt
+			HAL_FDCAN_DeactivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE);// Initialize CAN2 Rx1 Interrupt
+			// disable Timer Interrupts
+			HAL_TIM_Base_Stop_IT(&htim2);
+			HAL_TIM_Base_Stop_IT(&htim3);
+
+			// turn off some LEDs
+			HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+
+			// re-run the startup routine
+			printf("Received new mode. Re-starting motors.\n\r");
+			if (CURR_CONTROL) {
+				DXL_MODE = CURRENT_POS_CONTROL;
+				} else DXL_MODE = POSITION_CONTROL;
+			Dynamixel_Startup_Routine(SENSOR_DEBUG); // in debug mode, the dynamixels will be disabled
+
+			// turn on LEDs
+			HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+			// reset flag
+			HAND_RESET = false;
+
+			// and reactivate the interrupts
+			// enable CAN Interrupts
+			HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);// Initialize CAN1 Rx0 Interrupt
+			HAL_FDCAN_ActivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE,0);// Initialize CAN2 Rx1 Interrupt
+			// enable Timer Interrupts
+			HAL_TIM_Base_Start_IT(&htim2);
+			HAL_TIM_Base_Start_IT(&htim3);
+
+		}
+
+
+
+
 	}
 }
 
@@ -969,16 +1021,19 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 					CURR_CONTROL = true;
 					MODE_SELECTED = true;
 					SENSOR_DEBUG = false;
+					HAND_RESET = true;
 				}
 				else if (sys_rx_buf[7] == 0xFD){
 					CURR_CONTROL = false;
 					MODE_SELECTED = true;
 					SENSOR_DEBUG = false;
+					HAND_RESET = true;
 				}
 				else if (sys_rx_buf[7] == 0xFB){
 					CURR_CONTROL = false;
 					MODE_SELECTED = true;
 					SENSOR_DEBUG = true;
+					HAND_RESET = true;
 				}
 			}
 	}

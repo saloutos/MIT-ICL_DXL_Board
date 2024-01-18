@@ -33,7 +33,7 @@ extern uint32_t multiGoalPosL[4], multiGoalPosR[4];
 
 extern uint8_t DXL_MODE;
 
-void Dynamixel_Startup_Routine (){
+void Dynamixel_Startup_Routine (bool torque_disable){
 // Enable dynamixels and set control mode...individual version
 	for (int i=0; i<idLength; i++) {
 		dxl_bus_1.TurnOnLED(dxl_ID[i], 0x00); // turn off LED
@@ -190,13 +190,14 @@ void Dynamixel_Startup_Routine (){
 	}
 
 	// set home positions
-	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-	dxl_bus_1.SetMultGoalPositions(dxl_ID, idLength, multiHomePos_1);
-	dxl_bus_2.SetMultGoalPositions(dxl_ID2, idLength2, multiHomePos_2);
-	dxl_bus_3.SetMultGoalPositions(dxl_IDPC, idLengthPC, multiHomePos_3);
-	dxl_bus_4.SetGoalPosition(9, 2048);
-	HAL_Delay(500);
-
+	if (!torque_disable){
+//		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+		dxl_bus_1.SetMultGoalPositions(dxl_ID, idLength, multiHomePos_1);
+		dxl_bus_2.SetMultGoalPositions(dxl_ID2, idLength2, multiHomePos_2);
+		dxl_bus_3.SetMultGoalPositions(dxl_IDPC, idLengthPC, multiHomePos_3);
+		dxl_bus_4.SetGoalPosition(9, 2048);
+		HAL_Delay(500);
+	}
 
 	// DXL profile fast remove gains?
 	for (int i=0; i<idLength; i++) {
@@ -212,7 +213,7 @@ void Dynamixel_Startup_Routine (){
 		dxl_bus_2.SetAccelerationProfile(dxl_ID2[i], 0);
 		dxl_bus_2.SetPosPGain(dxl_ID2[i], 800);
 		dxl_bus_2.SetPosDGain(dxl_ID2[i], 0);
-		dxl_bus_2.SetGoalCurrent(dxl_ID[i], 1193);
+		dxl_bus_2.SetGoalCurrent(dxl_ID2[i], 1193);
 		HAL_Delay(100);
 	}
 	for (int i=0; i<idLengthPC; i++) {
@@ -220,7 +221,7 @@ void Dynamixel_Startup_Routine (){
 		dxl_bus_3.SetAccelerationProfile(dxl_IDPC[i], 0);
 		dxl_bus_3.SetPosPGain(dxl_IDPC[i], 800);
 		dxl_bus_3.SetPosDGain(dxl_IDPC[i], 0);
-		dxl_bus_3.SetGoalCurrent(dxl_ID[i], 1193);
+		dxl_bus_3.SetGoalCurrent(dxl_IDPC[i], 1193);
 		HAL_Delay(100);
 	}
 	for (int i=0; i<idLengthWR; i++) {
@@ -228,8 +229,30 @@ void Dynamixel_Startup_Routine (){
 		dxl_bus_4.SetAccelerationProfile(dxl_IDWR[i], 0);
 		dxl_bus_4.SetPosPGain(dxl_IDWR[i], 800);
 		dxl_bus_4.SetPosDGain(dxl_IDWR[i], 0);
-		dxl_bus_4.SetGoalCurrent(dxl_ID[i], 2047);
+		dxl_bus_4.SetGoalCurrent(dxl_IDWR[i], 2047);
 		HAL_Delay(100);
 	}
+
+	// motors are enabled by default on startup, but if torque_disable flag is set they can be disabled after the setup
+	if (torque_disable){
+		for (int i=0; i<idLength; i++) {
+			dxl_bus_1.SetTorqueEn(dxl_ID[i],0x00);
+			HAL_Delay(100);
+		}
+		for (int i=0; i<idLength2; i++) {
+			dxl_bus_1.SetTorqueEn(dxl_ID2[i],0x00);
+			HAL_Delay(100);
+		}
+		for (int i=0; i<idLengthPC; i++) {
+			dxl_bus_1.SetTorqueEn(dxl_IDPC[i],0x00);
+			HAL_Delay(100);
+		}
+		for (int i=0; i<idLengthWR; i++) {
+			dxl_bus_1.SetTorqueEn(dxl_IDWR[i],0x00);
+			HAL_Delay(100);
+		}
+	}
+
 	printf("Start Up Routine Finished!!\r\n");
+
 }
