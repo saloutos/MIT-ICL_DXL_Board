@@ -101,11 +101,11 @@ float currentVel[9];
 float currentCur[9];
 float currentJointTau[9];
 
-float Kt = 2.0f * (3.7f / 2.7f);
+float Kt = 2.69f * (3.7f / 2.7f); // changed 2.0f to 2.69f
 float Ktinv = 1/Kt;
 float current_limit = 2.70f; //2.30f; // in A, max is 3.2(?)
 
-float Kt_WR = 2.0f * (8.9f / 5.5f);
+float Kt_WR = 2.69f * (8.9f / 5.5f); // changed 2.0f to 2.69f
 float Ktinv_WR = 1.0f/Kt_WR;
 float current_limit_WR = 4.40f; // in A
 
@@ -144,7 +144,7 @@ float desired_current[9];
 uint16_t current_command[9];
 
 // CAN command variables
-float dxl_pos_des[9] = {0.12f, 0.12f, 0.12f, 0.3f, -0.12f, -0.12f, -0.12f, 0.3f, 0.0f};
+float dxl_pos_des[9] = {0.12f, 0.12f, 0.12f, 0.3f, -0.12f, -0.12f, -0.12f, 0.3f, 0.0f}; // TODO: why is this non-zero?
 float dxl_vel_des[9] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 float dxl_tff_des[9] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 float dxl_kp[9] = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
@@ -885,10 +885,26 @@ int dxl_main(void)
 
 			// re-run the startup routine
 			printf("Received new mode. Re-starting motors.\n\r");
-			if (CURR_CONTROL) {
-				DXL_MODE = CURRENT_POS_CONTROL;
-				} else DXL_MODE = POSITION_CONTROL;
-			Dynamixel_Startup_Routine(SENSOR_DEBUG); // in debug mode, the dynamixels will be disabled
+			if (MODE_SELECTED) {
+				if (CURR_CONTROL) {
+					DXL_MODE = CURRENT_POS_CONTROL;
+					} else DXL_MODE = POSITION_CONTROL;
+				// start by disabling all of the motors
+				Dynamixel_Shutdown_Routine();
+				Dynamixel_Startup_Routine(SENSOR_DEBUG); // in debug mode, the dynamixels will be disabled
+			} else {
+				// disable message was received
+				Dynamixel_Shutdown_Routine();
+			}
+
+			// reset CAN commands
+			for (int i=0; i<9; i++){
+				dxl_pos_des[i] = 0.0f;
+				dxl_vel_des[i] = 0.0f;
+				dxl_tff_des[i] = 0.0f;
+				dxl_kp[i] = 0.5f;
+				dxl_kd[i] = 0.02f;
+			}
 
 			// turn on LEDs
 			HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
@@ -1035,6 +1051,12 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 					CURR_CONTROL = false;
 					MODE_SELECTED = true;
 					SENSOR_DEBUG = true;
+					HAND_RESET = true;
+				}
+				else if (sys_rx_buf[7] == 0xFA){
+					CURR_CONTROL = false;
+					MODE_SELECTED = false;
+					SENSOR_DEBUG = false;
 					HAND_RESET = true;
 				}
 			}

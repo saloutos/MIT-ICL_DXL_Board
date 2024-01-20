@@ -33,32 +33,39 @@ extern uint32_t multiGoalPosL[4], multiGoalPosR[4];
 
 extern uint8_t DXL_MODE;
 
-void Dynamixel_Startup_Routine (bool torque_disable){
-// Enable dynamixels and set control mode...individual version
-
-	// start by disabling all of the motors
+void Dynamixel_Shutdown_Routine(){
+	// disable all of the motors
 	for (int i=0; i<idLength; i++) {
 		dxl_bus_1.SetTorqueEn(dxl_ID[i],0x00);
-		HAL_Delay(100);
+		HAL_Delay(10);
 	}
 	for (int i=0; i<idLength2; i++) {
 		dxl_bus_2.SetTorqueEn(dxl_ID2[i],0x00);
-		HAL_Delay(100);
+		HAL_Delay(10);
 	}
 	for (int i=0; i<idLengthPC; i++) {
 		dxl_bus_3.SetTorqueEn(dxl_IDPC[i],0x00);
-		HAL_Delay(100);
+		HAL_Delay(10);
 	}
 	for (int i=0; i<idLengthWR; i++) {
 		dxl_bus_4.SetTorqueEn(dxl_IDWR[i],0x00);
-		HAL_Delay(100);
+		HAL_Delay(10);
 	}
+}
+
+void Dynamixel_Startup_Routine (bool torque_disable){
+// Enable dynamixels and set control mode...individual version
 
 	for (int i=0; i<idLength; i++) {
 		dxl_bus_1.TurnOnLED(dxl_ID[i], 0x00); // turn off LED
 		dxl_bus_1.SetTorqueEn(dxl_ID[i],0x00);
 		dxl_bus_1.SetRetDelTime(dxl_ID[i],0x02); // 4us delay time?
 		dxl_bus_1.SetControlMode(dxl_ID[i], DXL_MODE);
+//		// clear any previous commands
+//		dxl_bus_1.SetGoalPosition(dxl_ID[i], 2048);
+//		dxl_bus_1.SetPosPGain(dxl_ID[i], 0);
+//		dxl_bus_1.SetPosDGain(dxl_ID[i], 0);
+//		dxl_bus_1.SetGoalCurrent(dxl_ID[i], 0);
 		// set up indirect addresses for faster writing
 		dxl_bus_1.SetIndirectAddress(dxl_ID[i], 168,  84); // KP
 		dxl_bus_1.SetIndirectAddress(dxl_ID[i], 170,  85);
@@ -87,6 +94,11 @@ void Dynamixel_Startup_Routine (bool torque_disable){
 		dxl_bus_2.SetTorqueEn(dxl_ID2[i],0x00);
 		dxl_bus_2.SetRetDelTime(dxl_ID2[i],0x02); // 4us delay time?
 		dxl_bus_2.SetControlMode(dxl_ID2[i], DXL_MODE);
+//		// clear any previous commands
+//		dxl_bus_2.SetGoalPosition(dxl_ID2[i], 2048);
+//		dxl_bus_2.SetPosPGain(dxl_ID2[i], 0);
+//		dxl_bus_2.SetPosDGain(dxl_ID2[i], 0);
+//		dxl_bus_2.SetGoalCurrent(dxl_ID2[i], 0);
 		// set up indirect addresses for faster writing
 		dxl_bus_2.SetIndirectAddress(dxl_ID2[i], 168,  84); // KP
 		dxl_bus_2.SetIndirectAddress(dxl_ID2[i], 170,  85);
@@ -115,6 +127,11 @@ void Dynamixel_Startup_Routine (bool torque_disable){
 		dxl_bus_3.SetTorqueEn(dxl_IDPC[i],0x00);
 		dxl_bus_3.SetRetDelTime(dxl_IDPC[i],0x02); // 4us delay time?
 		dxl_bus_3.SetControlMode(dxl_IDPC[i], DXL_MODE);
+//		// clear any previous commands
+//		dxl_bus_3.SetGoalPosition(dxl_IDPC[i], 2048);
+//		dxl_bus_3.SetPosPGain(dxl_IDPC[i], 0);
+//		dxl_bus_3.SetPosDGain(dxl_IDPC[i], 0);
+//		dxl_bus_3.SetGoalCurrent(dxl_IDPC[i], 0);
 		// set up indirect addresses for faster writing
 		dxl_bus_3.SetIndirectAddress(dxl_IDPC[i], 168,  84); // KP
 		dxl_bus_3.SetIndirectAddress(dxl_IDPC[i], 170,  85);
@@ -143,6 +160,11 @@ void Dynamixel_Startup_Routine (bool torque_disable){
 		dxl_bus_4.SetTorqueEn(dxl_IDWR[i],0x00);
 		dxl_bus_4.SetRetDelTime(dxl_IDWR[i],0x02); // 4us delay time?
 		dxl_bus_4.SetControlMode(dxl_IDWR[i], DXL_MODE);
+//		// clear any previous commands
+//		dxl_bus_4.SetGoalPosition(dxl_IDWR[i], 2048);
+//		dxl_bus_4.SetPosPGain(dxl_IDWR[i], 0);
+//		dxl_bus_4.SetPosDGain(dxl_IDWR[i], 0);
+//		dxl_bus_4.SetGoalCurrent(dxl_IDWR[i], 0);
 		// set up indirect addresses for faster writing
 		dxl_bus_4.SetIndirectAddress(dxl_IDWR[i], 168,  84); // KP
 		dxl_bus_4.SetIndirectAddress(dxl_IDWR[i], 170,  85);
@@ -254,22 +276,7 @@ void Dynamixel_Startup_Routine (bool torque_disable){
 
 	// motors are enabled by default on startup, but if torque_disable flag is set they can be disabled after the setup
 	if (torque_disable){
-		for (int i=0; i<idLength; i++) {
-			dxl_bus_1.SetTorqueEn(dxl_ID[i],0x00);
-			HAL_Delay(100);
-		}
-		for (int i=0; i<idLength2; i++) {
-			dxl_bus_2.SetTorqueEn(dxl_ID2[i],0x00);
-			HAL_Delay(100);
-		}
-		for (int i=0; i<idLengthPC; i++) {
-			dxl_bus_3.SetTorqueEn(dxl_IDPC[i],0x00);
-			HAL_Delay(100);
-		}
-		for (int i=0; i<idLengthWR; i++) {
-			dxl_bus_4.SetTorqueEn(dxl_IDWR[i],0x00);
-			HAL_Delay(100);
-		}
+		Dynamixel_Shutdown_Routine();
 	}
 
 	printf("Start Up Routine Finished!!\r\n");
