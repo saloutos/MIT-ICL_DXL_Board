@@ -35,6 +35,25 @@ extern uint8_t DXL_MODE;
 
 void Dynamixel_Startup_Routine (bool torque_disable){
 // Enable dynamixels and set control mode...individual version
+
+	// start by disabling all of the motors
+	for (int i=0; i<idLength; i++) {
+		dxl_bus_1.SetTorqueEn(dxl_ID[i],0x00);
+		HAL_Delay(100);
+	}
+	for (int i=0; i<idLength2; i++) {
+		dxl_bus_2.SetTorqueEn(dxl_ID2[i],0x00);
+		HAL_Delay(100);
+	}
+	for (int i=0; i<idLengthPC; i++) {
+		dxl_bus_3.SetTorqueEn(dxl_IDPC[i],0x00);
+		HAL_Delay(100);
+	}
+	for (int i=0; i<idLengthWR; i++) {
+		dxl_bus_4.SetTorqueEn(dxl_IDWR[i],0x00);
+		HAL_Delay(100);
+	}
+
 	for (int i=0; i<idLength; i++) {
 		dxl_bus_1.TurnOnLED(dxl_ID[i], 0x00); // turn off LED
 		dxl_bus_1.SetTorqueEn(dxl_ID[i],0x00);
@@ -240,15 +259,15 @@ void Dynamixel_Startup_Routine (bool torque_disable){
 			HAL_Delay(100);
 		}
 		for (int i=0; i<idLength2; i++) {
-			dxl_bus_1.SetTorqueEn(dxl_ID2[i],0x00);
+			dxl_bus_2.SetTorqueEn(dxl_ID2[i],0x00);
 			HAL_Delay(100);
 		}
 		for (int i=0; i<idLengthPC; i++) {
-			dxl_bus_1.SetTorqueEn(dxl_IDPC[i],0x00);
+			dxl_bus_3.SetTorqueEn(dxl_IDPC[i],0x00);
 			HAL_Delay(100);
 		}
 		for (int i=0; i<idLengthWR; i++) {
-			dxl_bus_1.SetTorqueEn(dxl_IDWR[i],0x00);
+			dxl_bus_4.SetTorqueEn(dxl_IDWR[i],0x00);
 			HAL_Delay(100);
 		}
 	}
