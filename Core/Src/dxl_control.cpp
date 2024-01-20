@@ -572,118 +572,120 @@ void updateBusses(){
 	float vel_act[9] = {(float)jointVelocities1[0], (float)jointVelocities1[1], (float)jointVelocities1[2], (float)jointVelocities1[3], (float)jointVelocities2[0], (float)jointVelocities2[1], (float)jointVelocities2[2], (float)jointVelocities2[3], (float)currentVel[8]};
 
 	// run control (depending on control mode)
-	if (CURR_CONTROL){
+	if (!SENSOR_DEBUG){
+		if (CURR_CONTROL){
 
-		float desired_joint_torques[9];
-		float desired_actuator_torques[9];
-		for(int i=0; i<9; i++)  {
-//			 desired_joint_torques[i] = KP_des[i]*(pos_des[i]-pos_act[i]) + KD_des[i]*(vel_des[i]-vel_act[i]) + tau_ff_des[i];
-			 desired_joint_torques[i] = dxl_kp[i]*(dxl_pos_des[i]-pos_act[i]) + dxl_kd[i]*(dxl_vel_des[i]-vel_act[i]) + dxl_tff_des[i];
-	//         desired_joint_torques[i] = -0.1f*pos_act[i] - 0.01f*vel_act[i]; // basic impedance controller in joint space
+			float desired_joint_torques[9];
+			float desired_actuator_torques[9];
+			for(int i=0; i<9; i++)  {
+	//			 desired_joint_torques[i] = KP_des[i]*(pos_des[i]-pos_act[i]) + KD_des[i]*(vel_des[i]-vel_act[i]) + tau_ff_des[i];
+				 desired_joint_torques[i] = dxl_kp[i]*(dxl_pos_des[i]-pos_act[i]) + dxl_kd[i]*(dxl_vel_des[i]-vel_act[i]) + dxl_tff_des[i];
+		//         desired_joint_torques[i] = -0.1f*pos_act[i] - 0.01f*vel_act[i]; // basic impedance controller in joint space
+			}
+
+			// convert to desired actuator torques
+			for(int i=0; i<4; i++){
+				desired_actuator_torques[i] = JjointL[0][i]*desired_joint_torques[0] + JjointL[1][i]*desired_joint_torques[1] + JjointL[2][i]*desired_joint_torques[2] + JjointL[3][i]*desired_joint_torques[3];
+				desired_actuator_torques[i+4] = JjointR[0][i]*desired_joint_torques[4] + JjointR[1][i]*desired_joint_torques[5] + JjointR[2][i]*desired_joint_torques[6] + JjointR[3][i]*desired_joint_torques[7];
+			}
+			desired_actuator_torques[8] = desired_joint_torques[8];
+
+		//    for (int i=0; i<9; i++){
+		//    	desired_actuator_torques[i] = desired_joint_torques[i];
+		//    }
+
+		//    for (int i=0; i<9; i++) {
+		//    	desired_actuator_torques[i] = -0.5f*(float)dxl_position[i] - 0.0f*(float)dxl_velocity[i]; // basic impedance controller in actuator space, in mA (?)
+		//    	Ktinv = 1;
+		//    	Ktinv_WR = 1;
+		//    }
+
+			// convert to desired currents
+			for(int i = 0; i<8; i++){
+				desired_current[i] = fmaxf(fminf( Ktinv*desired_actuator_torques[i], current_limit ), -current_limit );
+				current_command[i] = (int16_t)(1000.0f*desired_current[i]); // commanded current is in mA!
+			}
+			// different parameters for wrist roll motor
+			desired_current[8] = fmaxf(fminf( Ktinv_WR*desired_actuator_torques[8], current_limit_WR), -current_limit_WR );
+			current_command[8] = (int16_t)(1000.0f*desired_current[8]);
+
+		// 1. obtain desired actuator positions, velocities, and torques from joint data
+		// 2. convert gains, torques to correct units
+			for (int i=0; i<8; i++){
+				pos_command[i] = 0;
+				vel_command[i] = 0;
+				cur_command[i] = current_command[i]; // could just set this now, with some bonus damping (non-zero KD gain)
+				kp_command[i] = 0; // abad was 800
+				kd_command[i] = 100; //150; // abad was 15000 (!!)
+			}
+			kd_command[3] = 900;
+			kd_command[7] = 900;
+
+	//		kp_command[8] = 800;
+	//		kd_command[8] = 500;
+	//		pos_command[8] = 2048;
+			kp_command[8] = 0;
+			kd_command[8] = 500;
+			pos_command[8] = 0;
+			cur_command[8] = current_command[8];
+
 		}
 
-		// convert to desired actuator torques
-		for(int i=0; i<4; i++){
-			desired_actuator_torques[i] = JjointL[0][i]*desired_joint_torques[0] + JjointL[1][i]*desired_joint_torques[1] + JjointL[2][i]*desired_joint_torques[2] + JjointL[3][i]*desired_joint_torques[3];
-			desired_actuator_torques[i+4] = JjointR[0][i]*desired_joint_torques[4] + JjointR[1][i]*desired_joint_torques[5] + JjointR[2][i]*desired_joint_torques[6] + JjointR[3][i]*desired_joint_torques[7];
+		else { // POSITION CONTROL DEMO
+	//		if (time_step % 4000==0) {
+	//			if (freq1 < max_freq && updown) {
+	//				freq1++;
+	//			}
+	//			else {
+	//				updown = false;
+	//				freq1--;
+	//				if (freq1 < 2) {
+	//				updown = true;
+	//				}
+	//			}
+	//			freq2 = freq1 / 2.0f;
+	//		}
+	//		ActuatorTransformationL(rtPos_L, 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), (amp2)*(sinf(freq2*PI*(float)(dt*time_step))));
+	//		ActuatorTransformationR(rtPos_R, -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -(amp2)*(sinf(freq2*PI*(float)(dt*time_step))));
+	//		time_step++;
+	//		for(int k = 0; k<4; k++){
+	//			trajPos[k] = rtPos_L[k];
+	//			trajPos[k+4] = rtPos_R[k];
+	//		}
+	//		trajPos[8] = 2048;
+	//		for (int i=0; i<9; i++){
+	//			pos_command[i] = trajPos[i];
+	//			vel_command[i] = 0;
+	//			cur_command[i] = 0;
+	//			kp_command[i] = 800;
+	//			kd_command[i] = 0;
+	//		}
+
+			// alternative, where desired positions are sent over CAN
+			ActuatorTransformationL(rtPos_L, dxl_pos_des[0], dxl_pos_des[1], dxl_pos_des[2], dxl_pos_des[3]);
+			ActuatorTransformationR(rtPos_R, dxl_pos_des[4], dxl_pos_des[5], dxl_pos_des[6], dxl_pos_des[7]);
+			for(int k = 0; k<4; k++){
+				trajPos[k] = rtPos_L[k];
+				trajPos[k+4] = rtPos_R[k];
+			}
+			trajPos[8] = rad2pulse(dxl_pos_des[8]);
+			for (int i=0; i<9; i++){
+				pos_command[i] = trajPos[i];
+				vel_command[i] = 0;
+				cur_command[i] = 0;
+				kp_command[i] = 800;
+				kd_command[i] = 0;
+			}
+
+
 		}
-		desired_actuator_torques[8] = desired_joint_torques[8];
+		eval_time[1] = __HAL_TIM_GET_COUNTER(&htim1);
 
-	//    for (int i=0; i<9; i++){
-	//    	desired_actuator_torques[i] = desired_joint_torques[i];
-	//    }
-
-	//    for (int i=0; i<9; i++) {
-	//    	desired_actuator_torques[i] = -0.5f*(float)dxl_position[i] - 0.0f*(float)dxl_velocity[i]; // basic impedance controller in actuator space, in mA (?)
-	//    	Ktinv = 1;
-	//    	Ktinv_WR = 1;
-	//    }
-
-		// convert to desired currents
-		for(int i = 0; i<8; i++){
-			desired_current[i] = fmaxf(fminf( Ktinv*desired_actuator_torques[i], current_limit ), -current_limit );
-			current_command[i] = (int16_t)(1000.0f*desired_current[i]); // commanded current is in mA!
-		}
-		// different parameters for wrist roll motor
-		desired_current[8] = fmaxf(fminf( Ktinv_WR*desired_actuator_torques[8], current_limit_WR), -current_limit_WR );
-		current_command[8] = (int16_t)(1000.0f*desired_current[8]);
-
-    // 1. obtain desired actuator positions, velocities, and torques from joint data
-    // 2. convert gains, torques to correct units
-		for (int i=0; i<8; i++){
-			pos_command[i] = 0;
-			vel_command[i] = 0;
-			cur_command[i] = current_command[i]; // could just set this now, with some bonus damping (non-zero KD gain)
-			kp_command[i] = 0; // abad was 800
-			kd_command[i] = 100; //150; // abad was 15000 (!!)
-		}
-		kd_command[3] = 900;
-		kd_command[7] = 900;
-
-//		kp_command[8] = 800;
-//		kd_command[8] = 500;
-//		pos_command[8] = 2048;
-		kp_command[8] = 0;
-		kd_command[8] = 500;
-		pos_command[8] = 0;
-		cur_command[8] = current_command[8];
-
+		// send commands
+		__HAL_TIM_SET_COUNTER(&htim1,0);
+		SetFullControlCommands_DMA();
+		eval_time[2] = __HAL_TIM_GET_COUNTER(&htim1);
 	}
-
-    else { // POSITION CONTROL DEMO
-//		if (time_step % 4000==0) {
-//			if (freq1 < max_freq && updown) {
-//				freq1++;
-//			}
-//			else {
-//				updown = false;
-//				freq1--;
-//				if (freq1 < 2) {
-//				updown = true;
-//				}
-//			}
-//			freq2 = freq1 / 2.0f;
-//		}
-//		ActuatorTransformationL(rtPos_L, 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), 0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), (amp2)*(sinf(freq2*PI*(float)(dt*time_step))));
-//		ActuatorTransformationR(rtPos_R, -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -0.5*(amp1)*(-1*cosf(freq1*PI*(float)(dt*time_step))+1.0f), -(amp2)*(sinf(freq2*PI*(float)(dt*time_step))));
-//		time_step++;
-//		for(int k = 0; k<4; k++){
-//			trajPos[k] = rtPos_L[k];
-//			trajPos[k+4] = rtPos_R[k];
-//		}
-//		trajPos[8] = 2048;
-//		for (int i=0; i<9; i++){
-//			pos_command[i] = trajPos[i];
-//			vel_command[i] = 0;
-//			cur_command[i] = 0;
-//			kp_command[i] = 800;
-//			kd_command[i] = 0;
-//		}
-
-		// alternative, where desired positions are sent over CAN
-		ActuatorTransformationL(rtPos_L, dxl_pos_des[0], dxl_pos_des[1], dxl_pos_des[2], dxl_pos_des[3]);
-		ActuatorTransformationR(rtPos_R, dxl_pos_des[4], dxl_pos_des[5], dxl_pos_des[6], dxl_pos_des[7]);
-		for(int k = 0; k<4; k++){
-			trajPos[k] = rtPos_L[k];
-			trajPos[k+4] = rtPos_R[k];
-		}
-		trajPos[8] = rad2pulse(dxl_pos_des[8]);
-		for (int i=0; i<9; i++){
-			pos_command[i] = trajPos[i];
-			vel_command[i] = 0;
-			cur_command[i] = 0;
-			kp_command[i] = 800;
-			kd_command[i] = 0;
-		}
-
-
-    }
-	eval_time[1] = __HAL_TIM_GET_COUNTER(&htim1);
-
-	// send commands
-	__HAL_TIM_SET_COUNTER(&htim1,0);
-    SetFullControlCommands_DMA();
-    eval_time[2] = __HAL_TIM_GET_COUNTER(&htim1);
 }
 
 
@@ -916,9 +918,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {
 	if (htim->Instance==TIM2){
 //		printf("C\n\r");
-		if(!SENSOR_DEBUG){
-			updateBusses();
-		}
+//		if(!SENSOR_DEBUG){
+		updateBusses();
+//		}
 
 	} else if (htim->Instance==TIM3){
 //		printf("S\n\r");
