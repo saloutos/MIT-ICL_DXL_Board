@@ -9,11 +9,11 @@
 #include "fdcan.h"
 
 // global variables
-extern float dxl_pos_des[9];
-extern float dxl_vel_des[9];
-extern float dxl_tff_des[9];
-extern float dxl_kp[9];
-extern float dxl_kd[9];
+extern float dxl_pos_des[8];
+extern float dxl_vel_des[8];
+extern float dxl_tff_des[8];
+extern float dxl_kp[8];
+extern float dxl_kd[8];
 extern uint8_t tof1[8];
 extern uint8_t tof2[8];
 extern float force1[5];
@@ -59,18 +59,18 @@ void pack_reply(uint8_t *msg, int dxl_id, float p, float v, float t){
 /// 3: [velocity[3-0], current[11-8]]
 /// 4: [current[7-0]]
 void pack_reply48_joints(uint8_t* fdmsg, float* p, float* v, float* t){
-	int p_int[9];
-	int v_int[9];
-	int t_int[9];
+	int p_int[8];
+	int v_int[8];
+	int t_int[8];
 
-	for (int i=0;i<9;i++){
+	for (int i=0;i<8;i++){
 		p_int[i] = float_to_uint(p[i],P_MIN, P_MAX, 16);
 		v_int[i] = float_to_uint(v[i],V_MIN, V_MAX, 12);
 		t_int[i] = float_to_uint(t[i]*T_SCALE, -T_MAX, T_MAX, 12);
 	}
 
 	int k = 0;
-	for (int j=0;j<9;j++){ //TODO: Make the two for loops into one? Currently more readable I think.
+	for (int j=0;j<8;j++){ // 40Bytes without wrist //TODO: Make the two for loops into one? Currently more readable I think.
 		fdmsg[k] = p_int[j]>>8;
 		fdmsg[k+1] = p_int[j]&0xFF;
 		fdmsg[k+2] = v_int[j]>>4;

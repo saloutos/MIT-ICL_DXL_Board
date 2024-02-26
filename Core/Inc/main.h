@@ -59,16 +59,12 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define RTS2_Pin GPIO_PIN_1
 #define RTS2_GPIO_Port GPIOA
-#define RTS3_Pin GPIO_PIN_5
-#define RTS3_GPIO_Port GPIOC
 #define LED1_Pin GPIO_PIN_0
 #define LED1_GPIO_Port GPIOB
 #define LED2_Pin GPIO_PIN_1
 #define LED2_GPIO_Port GPIOB
 #define RTS1_Pin GPIO_PIN_8
 #define RTS1_GPIO_Port GPIOA
-#define RTS5_Pin GPIO_PIN_3
-#define RTS5_GPIO_Port GPIOD
 #define RTS7_Pin GPIO_PIN_7
 #define RTS7_GPIO_Port GPIOD
 

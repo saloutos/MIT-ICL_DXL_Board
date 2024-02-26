@@ -10,7 +10,6 @@
 
 
 #include "main.h"
-#include "ForceSensor.h"
 #include "math_ops.h"
 
 // prototypes
