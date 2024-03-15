@@ -509,8 +509,8 @@ void sendCAN(){
 	pack_reply48_joints(txMsg_fd_joints, currentPos, currentVel, currentJointTau);
 	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_fd_joints, txMsg_fd_joints);
 
-	pack_reply48_sens(txMsg_fd_sens, force1, force2);
-	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_fd_sens, txMsg_fd_sens);
+//	pack_reply48_sens(txMsg_fd_sens, force1, force2);
+//	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_fd_sens, txMsg_fd_sens);
 }
 
 
@@ -533,15 +533,15 @@ int dxl_main(void)
 	txHeader_fd_joints.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	txHeader_fd_joints.MessageMarker = 0;
 
-	txHeader_fd_sens.Identifier = 0x02;
-	txHeader_fd_sens.IdType = FDCAN_STANDARD_ID;
-	txHeader_fd_sens.TxFrameType = FDCAN_DATA_FRAME;
-	txHeader_fd_sens.DataLength = FDCAN_DLC_BYTES_48;
-	txHeader_fd_sens.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-	txHeader_fd_sens.BitRateSwitch = FDCAN_BRS_ON;
-	txHeader_fd_sens.FDFormat = FDCAN_FD_CAN;
-	txHeader_fd_sens.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-	txHeader_fd_sens.MessageMarker = 0;
+//	txHeader_fd_sens.Identifier = 0x02;
+//	txHeader_fd_sens.IdType = FDCAN_STANDARD_ID;
+//	txHeader_fd_sens.TxFrameType = FDCAN_DATA_FRAME;
+//	txHeader_fd_sens.DataLength = FDCAN_DLC_BYTES_48;
+//	txHeader_fd_sens.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+//	txHeader_fd_sens.BitRateSwitch = FDCAN_BRS_ON;
+//	txHeader_fd_sens.FDFormat = FDCAN_FD_CAN;
+//	txHeader_fd_sens.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+//	txHeader_fd_sens.MessageMarker = 0;
 
 	//Rx Filters
 	sys_can_filt.IdType = FDCAN_STANDARD_ID;
@@ -552,13 +552,13 @@ int dxl_main(void)
 	sys_can_filt.FilterID2 = 0x00;
 	sys_can_filt.RxBufferIndex = 0;
 
-	sense_can_filt.IdType = FDCAN_STANDARD_ID;
-	sense_can_filt.FilterIndex = 0;
-	sense_can_filt.FilterType = FDCAN_FILTER_RANGE;
-	sense_can_filt.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
-	sense_can_filt.FilterID1 = 0x05;
-	sense_can_filt.FilterID2 = 0x0E; // up to 0x0E for phalange sensors
-	sense_can_filt.RxBufferIndex = 0;
+//	sense_can_filt.IdType = FDCAN_STANDARD_ID;
+//	sense_can_filt.FilterIndex = 0;
+//	sense_can_filt.FilterType = FDCAN_FILTER_RANGE;
+//	sense_can_filt.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
+//	sense_can_filt.FilterID1 = 0x05;
+//	sense_can_filt.FilterID2 = 0x0E; // up to 0x0E for phalange sensors
+//	sense_can_filt.RxBufferIndex = 0;
 
 	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sys_can_filt) != HAL_OK)
 	{
@@ -566,11 +566,11 @@ int dxl_main(void)
 		Error_Handler();
 	}
 
-	if (HAL_FDCAN_ConfigFilter(&hfdcan2, &sense_can_filt) != HAL_OK)
-	{
-		printf("Error in filter config. CAN FD2 \n\r");
-		Error_Handler();
-	}
+//	if (HAL_FDCAN_ConfigFilter(&hfdcan2, &sense_can_filt) != HAL_OK)
+//	{
+//		printf("Error in filter config. CAN FD2 \n\r");
+//		Error_Handler();
+//	}
 
 	if ((HAL_FDCAN_Start(&hfdcan1)) != HAL_OK ) //Initialize CAN Bus
 	{
@@ -578,11 +578,11 @@ int dxl_main(void)
 		while(1);
 	}
 
-	if ((HAL_FDCAN_Start(&hfdcan2)) != HAL_OK ) //Initialize CAN Bus
-	{
-		printf("Failed to start sensor CAN.\n\r");
-		while(1);
-	}
+//	if ((HAL_FDCAN_Start(&hfdcan2)) != HAL_OK ) //Initialize CAN Bus
+//	{
+//		printf("Failed to start sensor CAN.\n\r");
+//		while(1);
+//	}
 
 	HAL_Delay(100);
 
@@ -655,7 +655,7 @@ int dxl_main(void)
 
 	// enable CAN Interrupts
 	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);// Initialize CAN1 Rx0 Interrupt
-	HAL_FDCAN_ActivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE,0);// Initialize CAN2 Rx1 Interrupt
+//	HAL_FDCAN_ActivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE,0);// Initialize CAN2 Rx1 Interrupt
 
 	// enable Timer Interrupts
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
@@ -690,7 +690,7 @@ int dxl_main(void)
 			// deactivate all of the interrupts
 			// disable CAN Interrupts
 			HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);// Initialize CAN1 Rx0 Interrupt
-			HAL_FDCAN_DeactivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE);// Initialize CAN2 Rx1 Interrupt
+//			HAL_FDCAN_DeactivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE);// Initialize CAN2 Rx1 Interrupt
 			// disable Timer Interrupts
 			HAL_TIM_Base_Stop_IT(&htim2);
 			HAL_TIM_Base_Stop_IT(&htim3);
@@ -730,7 +730,7 @@ int dxl_main(void)
 			// and reactivate the interrupts
 			// enable CAN Interrupts
 			HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);// Initialize CAN1 Rx0 Interrupt
-			HAL_FDCAN_ActivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE,0);// Initialize CAN2 Rx1 Interrupt
+//			HAL_FDCAN_ActivateNotification(&hfdcan2,FDCAN_IT_RX_FIFO1_NEW_MESSAGE,0);// Initialize CAN2 Rx1 Interrupt
 			// enable Timer Interrupts
 			HAL_TIM_Base_Start_IT(&htim2);
 			HAL_TIM_Base_Start_IT(&htim3);
@@ -873,101 +873,101 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 
 }
 
-// new unpacking for neural net values from fingertip sensors and extra ToF
-void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1ITs)
-{
-	if((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) != RESET){
-//		cf_ct++;
-//		if (canHandle->Instance==FDCAN2){ // sensor CAN
-			HAL_FDCAN_GetRxMessage(canHandle, FDCAN_RX_FIFO1, &rxMsg_sense, sense_rx_buf);
-	//		unpack_sensor(sense_rx_buf, rxMsg_sense.StdId);
-
-			uint8_t id = rxMsg_sense.Identifier;
-//			printf("%d\n\r", id);
-
-			if (id == CAN2_FORCE_1){
-				// unpack forces and angles
-//				cycle_count = __HAL_TIM_GET_COUNTER(&htim1);
-//				printf("Cycle: %lu\r\n",cycle_count);
-//				__HAL_TIM_SET_COUNTER(&htim1, 0);
-//				f1_ct++;
-				uint16_t fx_int = ((sense_rx_buf[0]&0x0F)<<8)|sense_rx_buf[1];
-				uint16_t fy_int = (sense_rx_buf[2]<<4)|(sense_rx_buf[3]>>4);
-				uint16_t fz_int = ((sense_rx_buf[3]&0x0F)<<8)|sense_rx_buf[4];
-				uint16_t theta_int = (sense_rx_buf[5]<<4)|(sense_rx_buf[6]>>4);
-				uint16_t phi_int = ((sense_rx_buf[6]&0x0F)<<8)|sense_rx_buf[7];
-				/// convert uints to floats ///
-				force1[0] = uint_to_float(fx_int, FT_MIN, FT_MAX, 12);
-				force1[1]  = uint_to_float(fy_int, FT_MIN, FT_MAX, 12);
-				force1[2]  = uint_to_float(fz_int, FN_MIN, FN_MAX, 12);
-				force1[3]  = uint_to_float(theta_int, ANG_MIN, ANG_MAX, 12);
-				force1[4]  = uint_to_float(phi_int, ANG_MIN, ANG_MAX, 12);
-			}
-			else if (id == CAN2_FORCE_2){
-//				f2_ct++;
-				// unpack forces and angles
-				uint16_t fx_int = ((sense_rx_buf[0]&0x0F)<<8)|sense_rx_buf[1];
-				uint16_t fy_int = (sense_rx_buf[2]<<4)|(sense_rx_buf[3]>>4);
-				uint16_t fz_int = ((sense_rx_buf[3]&0x0F)<<8)|sense_rx_buf[4];
-				uint16_t theta_int = (sense_rx_buf[5]<<4)|(sense_rx_buf[6]>>4);
-				uint16_t phi_int = ((sense_rx_buf[6]&0x0F)<<8)|sense_rx_buf[7];
-				/// convert uints to floats ///
-				force2[0] = uint_to_float(fx_int, FT_MIN, FT_MAX, 12);
-				force2[1]  = uint_to_float(fy_int, FT_MIN, FT_MAX, 12);
-				force2[2]  = uint_to_float(fz_int, FN_MIN, FN_MAX, 12);
-				force2[3]  = uint_to_float(theta_int, ANG_MIN, ANG_MAX, 12);
-				force2[4]  = uint_to_float(phi_int, ANG_MIN, ANG_MAX, 12);
-			}
-			else if (id == CAN2_TOF_1){
-//				t1_ct++;
-				for(int i = 0;i<8;i++){
-					tof1[i] = sense_rx_buf[i];
-				}
-			}
-			else if (id == CAN2_TOF_2){
-//				t2_ct++;
-				for(int i = 0;i<8;i++){
-					tof2[i] = sense_rx_buf[i];
-				}
-			}
-
-			else if (id == CAN2_TOF_PALM){ // TODO: change this!!!
-				palm[0] = sense_rx_buf[0];
-				palm[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
-				palm[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
-			}
-
-			// phalange IDs (TOF and FSR)
-			else if (id == CAN2_PHAL_1){
-				phal1[0] = sense_rx_buf[0]; // TOF
-				phal1[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
-				phal1[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
-			}
-			else if (id == CAN2_PHAL_2){
-				phal2[0] = sense_rx_buf[0];
-				phal2[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
-				phal2[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
-			}
-			else if (id == CAN2_PHAL_3){
-				phal3[0] = sense_rx_buf[0];
-				phal3[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
-				phal3[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
-			}
-			else if (id == CAN2_PHAL_4){
-				phal4[0] = sense_rx_buf[0];
-				phal4[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
-				phal4[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
-			}
-			// pressure sensor message ids
-			// TODO: fix this!
-//			else if (id == CAN2_RAW_BMP_1){
+//// new unpacking for neural net values from fingertip sensors and extra ToF
+//void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo1ITs)
+//{
+//	if((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) != RESET){
+////		cf_ct++;
+////		if (canHandle->Instance==FDCAN2){ // sensor CAN
+//			HAL_FDCAN_GetRxMessage(canHandle, FDCAN_RX_FIFO1, &rxMsg_sense, sense_rx_buf);
+//	//		unpack_sensor(sense_rx_buf, rxMsg_sense.StdId);
+//
+//			uint8_t id = rxMsg_sense.Identifier;
+////			printf("%d\n\r", id);
+//
+//			if (id == CAN2_FORCE_1){
+//				// unpack forces and angles
+////				cycle_count = __HAL_TIM_GET_COUNTER(&htim1);
+////				printf("Cycle: %lu\r\n",cycle_count);
+////				__HAL_TIM_SET_COUNTER(&htim1, 0);
+////				f1_ct++;
+//				uint16_t fx_int = ((sense_rx_buf[0]&0x0F)<<8)|sense_rx_buf[1];
+//				uint16_t fy_int = (sense_rx_buf[2]<<4)|(sense_rx_buf[3]>>4);
+//				uint16_t fz_int = ((sense_rx_buf[3]&0x0F)<<8)|sense_rx_buf[4];
+//				uint16_t theta_int = (sense_rx_buf[5]<<4)|(sense_rx_buf[6]>>4);
+//				uint16_t phi_int = ((sense_rx_buf[6]&0x0F)<<8)|sense_rx_buf[7];
+//				/// convert uints to floats ///
+//				force1[0] = uint_to_float(fx_int, FT_MIN, FT_MAX, 12);
+//				force1[1]  = uint_to_float(fy_int, FT_MIN, FT_MAX, 12);
+//				force1[2]  = uint_to_float(fz_int, FN_MIN, FN_MAX, 12);
+//				force1[3]  = uint_to_float(theta_int, ANG_MIN, ANG_MAX, 12);
+//				force1[4]  = uint_to_float(phi_int, ANG_MIN, ANG_MAX, 12);
+//			}
+//			else if (id == CAN2_FORCE_2){
+////				f2_ct++;
+//				// unpack forces and angles
+//				uint16_t fx_int = ((sense_rx_buf[0]&0x0F)<<8)|sense_rx_buf[1];
+//				uint16_t fy_int = (sense_rx_buf[2]<<4)|(sense_rx_buf[3]>>4);
+//				uint16_t fz_int = ((sense_rx_buf[3]&0x0F)<<8)|sense_rx_buf[4];
+//				uint16_t theta_int = (sense_rx_buf[5]<<4)|(sense_rx_buf[6]>>4);
+//				uint16_t phi_int = ((sense_rx_buf[6]&0x0F)<<8)|sense_rx_buf[7];
+//				/// convert uints to floats ///
+//				force2[0] = uint_to_float(fx_int, FT_MIN, FT_MAX, 12);
+//				force2[1]  = uint_to_float(fy_int, FT_MIN, FT_MAX, 12);
+//				force2[2]  = uint_to_float(fz_int, FN_MIN, FN_MAX, 12);
+//				force2[3]  = uint_to_float(theta_int, ANG_MIN, ANG_MAX, 12);
+//				force2[4]  = uint_to_float(phi_int, ANG_MIN, ANG_MAX, 12);
+//			}
+//			else if (id == CAN2_TOF_1){
+////				t1_ct++;
 //				for(int i = 0;i<8;i++){
-//					pressure_raw1[i] = sense_rx_buf[i];
+//					tof1[i] = sense_rx_buf[i];
 //				}
 //			}
-
-
-
-		}
-//	}
-}
+//			else if (id == CAN2_TOF_2){
+////				t2_ct++;
+//				for(int i = 0;i<8;i++){
+//					tof2[i] = sense_rx_buf[i];
+//				}
+//			}
+//
+//			else if (id == CAN2_TOF_PALM){ // TODO: change this!!!
+//				palm[0] = sense_rx_buf[0];
+//				palm[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+//				palm[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
+//			}
+//
+//			// phalange IDs (TOF and FSR)
+//			else if (id == CAN2_PHAL_1){
+//				phal1[0] = sense_rx_buf[0]; // TOF
+//				phal1[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+//				phal1[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
+//			}
+//			else if (id == CAN2_PHAL_2){
+//				phal2[0] = sense_rx_buf[0];
+//				phal2[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+//				phal2[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
+//			}
+//			else if (id == CAN2_PHAL_3){
+//				phal3[0] = sense_rx_buf[0];
+//				phal3[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+//				phal3[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
+//			}
+//			else if (id == CAN2_PHAL_4){
+//				phal4[0] = sense_rx_buf[0];
+//				phal4[1] = (sense_rx_buf[1]<<4)|((sense_rx_buf[2]&0xF0)>>4); // FSR 1
+//				phal4[2] = ((sense_rx_buf[2]&0x0F)<<8)|sense_rx_buf[3]; // FSR 2
+//			}
+//			// pressure sensor message ids
+//			// TODO: fix this!
+////			else if (id == CAN2_RAW_BMP_1){
+////				for(int i = 0;i<8;i++){
+////					pressure_raw1[i] = sense_rx_buf[i];
+////				}
+////			}
+//
+//
+//
+//		}
+////	}
+//}
