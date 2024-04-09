@@ -34,13 +34,13 @@ Using Dynamixel Protocol 2.0: https://emanual.robotis.com/docs/en/dxl/protocol2/
 #define OPERATING_MODE          0x0B    //RW        3       0 ~ 16
 #define SHADOW_ID               0x0C    //RW        255     0 ~ 252
 #define PROTOCOL                0x0D    //RW        2       2 ~ 22
-#define HOMING OFFSET           0x14    //RW        0       -1044479 ~ 1044479 (in pulses)
+#define HOMING_OFFSET           0x14    //RW        0       -1044479 ~ 1044479 (in pulses)
 #define MOVING_THRESHOLD        0x18    //RW        10      0 ~ 1023 (in 0.229 rev/min) 
 #define TEMPERATURE_LIMIT       0x1F    //RW        70      0 ~ 100 (in deg C)
 #define MAX_VOLTAGE_LIMIT       0x20    //RW        70      31 ~ 70 (in 0.1 V)
 #define MIN_VOLTAGE_LIMIT       0x22    //RW        35      31 ~ 70 (in 0.1 V)
 #define PWM_LIMIT               0x24    //RW        885     0 ~ 885 (in 0.113%)
-#define CURRENT_LIMIT           0x26    //RW        1750    0 ~ 1750 (in mA)
+#define CURRENT_LIMIT           0x26    //RW        1750    0 ~ 1750 (in 2.69 mA)
 #define VELOCITY_LIMIT          0x2C    //RW        445     0 ~ 2047 (in 0.229 rev/min)
 #define MAX_POSITION_LIMIT      0x30    //RW        4095    0 ~ 4095 (in pulses)
 #define MIN_POSITION_LIMIT      0x34    //RW        0       0 ~ 4095 (in pulses)
@@ -64,11 +64,11 @@ Using Dynamixel Protocol 2.0: https://emanual.robotis.com/docs/en/dxl/protocol2/
 
 // added in custom firmware from Robotis
 #define FF_PWM_OFST				0x5C    //RW        0       0.00 (as %)
-#define FF_CUR_OFST				0x5E    //RW		0		0.00 (in mA)
+#define FF_CUR_OFST				0x5E    //RW		0		0.00 (in 2.69 mA)
 
 #define BUS_WATCHDOG            0x62    //RW        0       1 ~ 127 (in 20 msec)
 #define GOAL_PWM                0x64    //RW        -       -PWM_LIMIT ~ PWM_LIMIT
-#define GOAL_CURRENT            0x66    //RW        -       -CURRENT_LIMIT ~ CURRENT_LIMIT (in mA)
+#define GOAL_CURRENT            0x66    //RW        -       -CURRENT_LIMIT ~ CURRENT_LIMIT (in 2.69 mA)
 #define GOAL_VELOCITY           0x68    //RW        -       -VELOCITY_LIMIT ~ VELOCITY_LIMIT (in 0.229 rev/min)
 #define PROF_ACCEL              0x6C    //RW        0       0 ~ 32767 (in 214.577 rev/min2 or in msec)
 #define PROF_VELOCITY           0x70    //RW        0       0 ~ 32767 (in 0.229 rev/min)
@@ -77,7 +77,7 @@ Using Dynamixel Protocol 2.0: https://emanual.robotis.com/docs/en/dxl/protocol2/
 #define MOVING                  0x7A    //R         0       0 ~ 1
 #define MOVING_STATUS           0x7B    //R         0       -
 #define PRESENT_PWM             0x7C    //R         -       -
-#define PRESENT_CURRENT         0x7E    //R         -       (in mA)
+#define PRESENT_CURRENT         0x7E    //R         -       (in 2.69 mA)
 #define PRESENT_VELOCITY        0x80    //R         -       (in 0.229 rev/min)
 #define PRESENT_POSITION        0x84    //R         -       (in pulses)
 #define VELOCITY_TRAJ           0x88    //R         -       (in 0.229 rev/min)

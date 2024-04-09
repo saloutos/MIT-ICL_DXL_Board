@@ -58,8 +58,7 @@ void PeriphCommonClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t rx_buffer[50];
-uint8_t tx_buffer[17];
+
 /* USER CODE END 0 */
 
 /**
