@@ -15,7 +15,7 @@
 // defines
 #define VERSION_NUMBER 	1.21f
 #define MOTOR_KT 		3.7f/2.7f 	// TODO: replace this!
-#define CURRENT_LIMIT 	2.7f 		// TODO: replace this!
+#define MOTOR_CUR_LIM 	2.7f 		// TODO: replace this!
 
 #define cur_count2amp(x) (x*(2.69f/1000.0f))
 #define cur_amp2count(x) (int16_t)(x*(1000.0f/2.69f))
@@ -283,23 +283,19 @@ void updateBusses(){
 	// run control (depending on control mode)
 	if (!SENSOR_DEBUG){
 		if (CURR_CONTROL){
-
 			// PD control plus feedforward torque in joint-space
 			for(int i=0; i<8; i++)  {
 				 joint_tau_des[i] = joint_kp[i]*(joint_pos_des[i]-joint_pos[i]) 
 				 						+ joint_kd[i]*(joint_vel_des[i]-joint_vel[i]) 
 											+ joint_tau_ff[i];
 			}
-
 			// convert to desired torques in motor-space
 			JointTau2MotorTau(joint_tau_des, motor_tau_des);
-
 			// convert to desired motor currents
 			for(int i = 0; i<8; i++){
-				motor_cur_des_A[i] = fmaxf(fminf(motor_tau_des[i]/MOTOR_KT, CURRENT_LIMIT), -CURRENT_LIMIT);
+				motor_cur_des_A[i] = fmaxf(fminf(motor_tau_des[i]/MOTOR_KT, MOTOR_CUR_LIM), -MOTOR_CUR_LIM);
 				motor_cur_des[i] = cur_amp2count(motor_cur_des_A[i]);
 			}
-
 			// set the rest of the commands to send to motors
 			for (int i=0; i<8; i++){
 				motor_pos_des[i] = 0;
@@ -309,12 +305,10 @@ void updateBusses(){
 			}
 			motor_kd[3] = 600; // higher damping gains for abad motors
 			motor_kd[7] = 600;
-
-		} else { // POSITION CONTROL
-
+		}
+		else { // POSITION CONTROL
 			// transform desired joint positions to desired actuator positions
 			JointPos2MotorPos(joint_pos_des, motor_pos_des);
-
 			// set the rest of the commands to send to motors
 			for (int i=0; i<8; i++){
 				motor_vel_des[i] = 0;
@@ -322,7 +316,6 @@ void updateBusses(){
 				motor_kp[i] = 800;
 				motor_kd[i] = 0;
 			}
-
 		}
 		eval_time[1] = __HAL_TIM_GET_COUNTER(&htim1);
 
@@ -345,7 +338,7 @@ int dxl_main(void)
 	printf("\r\n--------MIT Hand Control Board Firmware--------\r\n");
 	printf("Version No: %.2f\r\n\n\n", VERSION_NUMBER);
 
-	//Tx Headers
+	// Tx Headers
 	txHeader_joints.Identifier = 0x01;
 	txHeader_joints.IdType = FDCAN_STANDARD_ID;
 	txHeader_joints.TxFrameType = FDCAN_DATA_FRAME;
@@ -356,7 +349,7 @@ int dxl_main(void)
 	txHeader_joints.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	txHeader_joints.MessageMarker = 0;
 
-	//Rx Filters
+	// Rx Filters
 	canFilt_joints.IdType = FDCAN_STANDARD_ID;
 	canFilt_joints.FilterIndex = 0;
 	canFilt_joints.FilterType = FDCAN_FILTER_MASK;
@@ -372,7 +365,7 @@ int dxl_main(void)
 	}
 
 
-	if ((HAL_FDCAN_Start(&hfdcan1)) != HAL_OK ) //Initialize CAN Bus
+	if ((HAL_FDCAN_Start(&hfdcan1)) != HAL_OK ) // Initialize CAN Bus
 	{
 		printf("Failed to start CAN.\n\r");
 		while(1);
@@ -409,7 +402,7 @@ int dxl_main(void)
 	}
 
 	// enable CAN Interrupts
-	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);// Initialize CAN1 Rx0 Interrupt
+	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0); // Initialize CAN1 Rx0 Interrupt
 
 	// enable Timer Interrupts
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);

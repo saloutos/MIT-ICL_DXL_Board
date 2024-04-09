@@ -142,9 +142,9 @@ void Dynamixel_Startup_Routine (bool torque_disable){
 	pos3[0] = home_motor_pos[3];
 	pos3[1] = home_motor_pos[7];
 	if (!torque_disable){
-		dxl_bus_1.SetMultGoalPositions(dxl_ID1, idLength1, pos1);
-		dxl_bus_2.SetMultGoalPositions(dxl_ID2, idLength2, pos2);
-		dxl_bus_3.SetMultGoalPositions(dxl_ID3, idLength3, pos3);
+		dxl_bus_1.SetMultGoalPositions(dxl_ID1, idLength1, (uint32_t*)pos1);
+		dxl_bus_2.SetMultGoalPositions(dxl_ID2, idLength2, (uint32_t*)pos2);
+		dxl_bus_3.SetMultGoalPositions(dxl_ID3, idLength3, (uint32_t*)pos3);
 		HAL_Delay(100);
 	}
 
