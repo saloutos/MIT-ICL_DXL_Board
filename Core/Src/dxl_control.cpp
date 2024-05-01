@@ -26,7 +26,7 @@ volatile bool MODE_SELECTED = false;
 volatile bool SENSOR_DEBUG = false;
 volatile bool HAND_RESET = false;
 uint8_t DXL_MODE;
-uint32_t eval_time[3] = {0, 0, 0}; // for timing and debugging
+uint32_t eval_time[4] = {0, 0, 0, 0}; // for timing and debugging
 
 // Initialize CAN FD stuff
 FDCAN_RxHeaderTypeDef rxMsg_joints;
@@ -255,16 +255,22 @@ void SetFullControlCommands_DMA()
     dxl_bus_1.sendIPacket_DMA();
 	dxl_bus_2.sendIPacket_DMA();
 	dxl_bus_3.sendIPacket_DMA();
-
+	while((!tx_flag_1)||(!tx_flag_2)||(!tx_flag_3)){;}
 }
 
 // run motor control laws
 void updateBusses(){
-
+if(HAND_RESET){
+	HAL_TIM_Base_Stop_IT(&htim2);
+	HAL_TIM_Base_Stop_IT(&htim3);
+}
+else{
 	// start by getting new data from the motors
+//	__HAL_TIM_SET_COUNTER(&htim1,0);
+//	eval_time[0] = __HAL_TIM_GET_COUNTER(&htim1);
 	__HAL_TIM_SET_COUNTER(&htim1,0);
 	GetBulkData_DMA();
-	eval_time[0] = __HAL_TIM_GET_COUNTER(&htim1);
+	eval_time[0] = __HAL_TIM_GET_COUNTER(&htim1); //Reading data from dynamixels
 	__HAL_TIM_SET_COUNTER(&htim1,0);
 
 	// transform motor positions to joint positions
@@ -303,8 +309,8 @@ void updateBusses(){
 				motor_kp[i] = 0; 
 				motor_kd[i] = 100;
 			}
-			motor_kd[3] = 600; // higher damping gains for abad motors
-			motor_kd[7] = 600;
+			motor_kd[3] = 100; // higher damping gains for abad motors
+			motor_kd[7] = 100;
 		}
 		else { // POSITION CONTROL
 			// transform desired joint positions to desired actuator positions
@@ -317,19 +323,24 @@ void updateBusses(){
 				motor_kd[i] = 0;
 			}
 		}
-		eval_time[1] = __HAL_TIM_GET_COUNTER(&htim1);
+		eval_time[1] = __HAL_TIM_GET_COUNTER(&htim1); //Joint space Impedance Controller Calculation
+		__HAL_TIM_SET_COUNTER(&htim1,0);
 
 		// send commands
-		__HAL_TIM_SET_COUNTER(&htim1,0);
+//		__HAL_TIM_SET_COUNTER(&htim1,0);
 		SetFullControlCommands_DMA();
-		eval_time[2] = __HAL_TIM_GET_COUNTER(&htim1);
+		eval_time[2] = __HAL_TIM_GET_COUNTER(&htim1); // Send Control
 	}
+}
 }
 
 // compile and send CAN message with joint data
 void sendCAN(){
+//	__HAL_TIM_SET_COUNTER(&htim1,0);
 	pack_reply48_joints(txMsg_joints, joint_pos, joint_vel, joint_tau);
 	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_joints, txMsg_joints);
+//	eval_time[3] = __HAL_TIM_GET_COUNTER(&htim1);
+
 }
 
 // main CPP loop
