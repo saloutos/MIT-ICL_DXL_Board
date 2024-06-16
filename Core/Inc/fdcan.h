@@ -38,11 +38,17 @@ extern FDCAN_HandleTypeDef hfdcan2;
 
 /* USER CODE BEGIN Private defines */
 //MAIN BUS CAN
-#define ENABLE_COMMAND			0
-#define	TX_JOINTS				1
-#define TX_SENSORS				2
-#define LEFT_FINGER_COMMAND		3
-#define RIGHT_FINGER_COMMAND	4
+#define ENABLE_COMMAND			1
+#define	TX_JOINTS				2
+#define TX_SENSORS				3
+#define LEFT_FINGER_COMMAND		4
+#define RIGHT_FINGER_COMMAND	5
+
+// mode select messages
+#define MS_DISABLE				0xFA
+#define MS_SENSE_DEBUG			0xFB
+#define MS_CUR_CTRL				0xFC
+#define MS_POS_CTRL				0xFD
 
 //SENSOR BUS CAN
 #define CAN2_FORCE_1            5
