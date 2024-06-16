@@ -350,7 +350,7 @@ int dxl_main(void)
 	printf("Version No: %.2f\r\n\n\n", VERSION_NUMBER);
 
 	// Tx Headers
-	txHeader_joints.Identifier = 0x01;
+	txHeader_joints.Identifier = TX_JOINTS;
 	txHeader_joints.IdType = FDCAN_STANDARD_ID;
 	txHeader_joints.TxFrameType = FDCAN_DATA_FRAME;
 	txHeader_joints.DataLength = FDCAN_DLC_BYTES_48;
@@ -374,6 +374,8 @@ int dxl_main(void)
 		printf("Error in filter config. CAN FD1 \n\r");
 		Error_Handler();
 	}
+
+	// TODO: configure global filter?
 
 
 	if ((HAL_FDCAN_Start(&hfdcan1)) != HAL_OK ) // Initialize CAN Bus
@@ -540,7 +542,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 		HAL_FDCAN_GetRxMessage(canHandle, FDCAN_RX_FIFO0, &rxMsg_joints, rxBuf_joints);
 		uint32_t id = rxMsg_joints.Identifier;
 		// Left finger
-		if(id==3){ 
+		if(id==LEFT_FINGER_COMMAND){
 			int p_int[4], v_int[4], kp_int[4], kd_int[4], t_int[4];
 			for(int i=0;i<4;i++){
 				p_int[i] = (rxBuf_joints[i*8+0]<<8)|rxBuf_joints[i*8+1];
@@ -558,7 +560,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 			}
 		}
 		// Right finger
-		else if(id==4){
+		else if(id==RIGHT_FINGER_COMMAND){
 			int p_int[4], v_int[4], kp_int[4], kd_int[4], t_int[4];
 			for(int i=0;i<4;i++){
 				p_int[i] = (rxBuf_joints[i*8+0]<<8)|rxBuf_joints[i*8+1];
@@ -576,7 +578,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 			}
 		}
 		// Mode select message
-		else if(id==80){
+		else if(id==ENABLE_COMMAND){
 			if(rxBuf_joints[7] == 0xFC){
 				CURR_CONTROL = true;
 				MODE_SELECTED = true;
