@@ -24,15 +24,14 @@
 
 // System control stuff
 
-// TODO: be able to set this as part of the enable CAN message
-volatile bool BUS2_ENABLE = false; // should bus 2 be communicated with?
+volatile bool BUS2_ENABLE = false; // should bus 2 be communicated with? can be set over CAN
 
 volatile bool CURR_CONTROL = true; // false is position control mode
 volatile bool MODE_SELECTED = false; // Default: false
 volatile bool MOTOR_DEBUG = false; // Default: false
 volatile bool HAND_RESET = false;
 uint8_t DXL_MODE;
-uint32_t eval_time[4] = {0, 0, 0, 0}; // for timing and MOTOR_DEBUGging
+uint32_t eval_time[4] = {0, 0, 0, 0}; // for timing and debugging
 
 // Initialize CAN FD stuff
 FDCAN_RxHeaderTypeDef rxMsg_joints;
@@ -591,6 +590,14 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 				HAL_TIM_Base_Stop_IT(&htim3);
 				HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
 			}
+			// check byte 6 for bus 2 enable
+			if (rxBuf_joints[6] == 0xAA){
+				BUS2_ENABLE = true;
+			} else {
+				BUS2_ENABLE = false;
+			}
+
+
 
 		}
 	}
