@@ -13,7 +13,9 @@
 #include <pack_can.h>
 
 // defines
-#define VERSION_NUMBER 	1.21f
+#define VERSION_NUMBER 	0.01f
+
+// TODO: define these for both types of motors
 #define MOTOR_KT 		3.7f/2.7f 	// TODO: replace this!
 #define MOTOR_CUR_LIM 	2.7f 		// TODO: replace this!
 
@@ -21,71 +23,68 @@
 #define cur_amp2count(x) (int16_t)(x*(1000.0f/2.69f))
 
 // System control stuff
+
+// TODO: be able to set this as part of the enable CAN message
+volatile bool BUS2_ENABLE = false; // should bus 2 be communicated with?
+
 volatile bool CURR_CONTROL = true; // false is position control mode
-volatile bool MODE_SELECTED = false;
-volatile bool SENSOR_DEBUG = false;
+volatile bool MODE_SELECTED = false; // Default: false
+volatile bool MOTOR_DEBUG = false; // Default: false
 volatile bool HAND_RESET = false;
 uint8_t DXL_MODE;
-uint32_t eval_time[4] = {0, 0, 0, 0}; // for timing and debugging
+uint32_t eval_time[4] = {0, 0, 0, 0}; // for timing and MOTOR_DEBUGging
 
 // Initialize CAN FD stuff
 FDCAN_RxHeaderTypeDef rxMsg_joints;
 FDCAN_TxHeaderTypeDef txHeader_joints;
-FDCAN_TxHeaderTypeDef txHeader_sensors;
 FDCAN_FilterTypeDef canFilt_en;
 FDCAN_FilterTypeDef canFilt_joints;
 uint8_t txMsg_joints[48];
-uint8_t txMsg_sensor_enable[48];
-uint8_t txMsg_sensor_disable[48];
 uint8_t rxBuf_joints[48];
 
 // Initialize dynamixel stuff
-XM430_bus dxl_bus_1(&huart1, RTS1_GPIO_Port, RTS1_Pin); // left MCP, PIP, DIP
-XM430_bus dxl_bus_2(&huart2, RTS2_GPIO_Port, RTS2_Pin); // right MCP, PIP, DIP
-XM430_bus dxl_bus_3(&huart7, RTS7_GPIO_Port, RTS7_Pin); // left MCR, right MCR
+XM430_bus dxl_bus_1(&huart1, RTS1_GPIO_Port, RTS1_Pin); // // base, left 1, right 1 (XM430 motors)
+XM430_bus dxl_bus_2(&huart2, RTS2_GPIO_Port, RTS2_Pin); // left 2, right 2 (XC330 motors)
 
-uint8_t dxl_IDs[] = {1, 2, 3, 4, 5, 6, 7, 8};
+uint8_t dxl_IDs[] = {1, 2, 3, 4, 5};
 uint8_t dxl_ID1[] =  {1, 2, 3};
-uint8_t dxl_ID2[] = {5, 6, 7};
-uint8_t dxl_ID3[] = {4, 8};
+uint8_t dxl_ID2[] = {4, 5};
 uint8_t idLength1 = 3;
-uint8_t idLength2 = 3;
-uint8_t idLength3 = 2;
+uint8_t idLength2 = 2;
+
 volatile uint8_t tx_flag_1;
 volatile uint8_t tx_flag_2;
-volatile uint8_t tx_flag_3;
 volatile uint8_t rx_flag_1;
 volatile uint8_t rx_flag_2;
-volatile uint8_t rx_flag_3;
 
 // joint-space states
-float joint_pos[8];
-float joint_vel[8];
-float joint_tau[8];
+float joint_pos[5];
+float joint_vel[5];
+float joint_tau[5];
 
 // joint-space commands
-float joint_tau_des[8]; 
-float joint_pos_des[8] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-float joint_vel_des[8] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-float joint_tau_ff[8]  = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-float joint_kp[8]      = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
-float joint_kd[8]      = {0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f};
+float joint_tau_des[5];
+float joint_pos_des[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+float joint_vel_des[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+float joint_tau_ff[5]  = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+float joint_kp[5]      = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
+float joint_kd[5]      = {0.02f, 0.02f, 0.02f, 0.02f, 0.02f};
 
 // motor-space states
-int32_t motor_pos[8];
-int32_t motor_vel[8];
-int16_t motor_cur[8];
-float motor_cur_A[8];
-float motor_tau[8];
+int32_t motor_pos[5];
+int32_t motor_vel[5];
+int16_t motor_cur[5];
+float motor_cur_A[5];
+float motor_tau[5];
 
 // motor-space commands
-float motor_tau_des[8];
-int32_t motor_pos_des[8];
-int32_t motor_vel_des[8];
-int16_t motor_cur_des[8];
-float motor_cur_des_A[8];
-uint32_t motor_kp[8];
-uint32_t motor_kd[8];
+float motor_tau_des[5];
+int32_t motor_pos_des[5];
+int32_t motor_vel_des[5];
+int16_t motor_cur_des[5];
+float motor_cur_des_A[5];
+uint32_t motor_kp[5];
+uint32_t motor_kd[5];
 
 // get all of the motor data
 void GetBulkData_DMA()
@@ -95,26 +94,30 @@ void GetBulkData_DMA()
 	uint8_t start_addr = PRESENT_CURRENT;
 	dxl_bus_1.sRead(data_len, start_addr, dxl_ID1, idLength1);
 	dxl_bus_1.rPacketLength = 8 + idLength1*(4+data_len);
-	dxl_bus_2.sRead(data_len, start_addr, dxl_ID2, idLength2);
-	dxl_bus_2.rPacketLength = 8 + idLength2*(4+data_len);
-	dxl_bus_3.sRead(data_len, start_addr, dxl_ID3, idLength3);
-	dxl_bus_3.rPacketLength = 8 + idLength3*(4+data_len);
+	if (BUS2_ENABLE){
+		dxl_bus_2.sRead(data_len, start_addr, dxl_ID2, idLength2);
+		dxl_bus_2.rPacketLength = 8 + idLength2*(4+data_len);
+	}
 
 	// DMA transmissions
 	tx_flag_1 = 0;
 	rx_flag_1 = 0;
 	tx_flag_2 = 0;
 	rx_flag_2 = 0;
-	tx_flag_3 = 0;
-	rx_flag_3 = 0;
 	dxl_bus_1.sendIPacket_DMA();
-	dxl_bus_2.sendIPacket_DMA();
-	dxl_bus_3.sendIPacket_DMA();
-	while((!tx_flag_1)||(!tx_flag_2)||(!tx_flag_3)){;}
+	if (BUS2_ENABLE){
+		dxl_bus_2.sendIPacket_DMA();
+	} else {
+		tx_flag_2 = 1;
+	}
+	while((!tx_flag_1)||(!tx_flag_2)){;}
 	dxl_bus_1.getRPacket_DMA();
-	dxl_bus_2.getRPacket_DMA();
-	dxl_bus_3.getRPacket_DMA();
-	while((!rx_flag_1)||(!rx_flag_2)||(!rx_flag_3)){;}
+	if (BUS2_ENABLE){
+		dxl_bus_2.getRPacket_DMA();
+	} else {
+		rx_flag_2 = 1;
+	}
+	while((!rx_flag_1)||(!rx_flag_2)){;}
 
 	// for loop to extract ret_vals from rPackets
 	int i = 10;
@@ -132,37 +135,23 @@ void GetBulkData_DMA()
 		motor_pos[h] = (int32_t) ((uint32_t)ret_vals1[6] | (((uint32_t)ret_vals1[7]<<8)&0x0000FF00) | (((uint32_t)ret_vals1[8]<<16)&0x00FF0000) | (((uint32_t)ret_vals1[9]<<24)&0xFF000000));
 		i+=4; // increment for next ID in rPacket
 	}
-	i = 10; // reset index
-	uint8_t ret_vals2[data_len];
-	for(int j=0; j<idLength2; j++){ // for each ID
-		// pull data out from rPacket
-		for (int k=0; k<data_len; k++){
-			ret_vals2[k] = dxl_bus_2.rPacket[i];
-			i++;
+	if (BUS2_ENABLE){
+		i = 10; // reset index
+		uint8_t ret_vals2[data_len];
+		for(int j=0; j<idLength2; j++){ // for each ID
+			// pull data out from rPacket
+			for (int k=0; k<data_len; k++){
+				ret_vals2[k] = dxl_bus_2.rPacket[i];
+				i++;
+			}
+			// pack dxl variables
+			int h = dxl_ID2[j]-1;
+			motor_cur[h] = (int16_t) ((uint16_t)ret_vals2[0] | (((uint16_t)ret_vals2[1]<<8)&0xFF00));
+			motor_vel[h] = (int32_t) ((uint32_t)ret_vals2[2] | (((uint32_t)ret_vals2[3]<<8)&0x0000FF00) | (((uint32_t)ret_vals2[4]<<16)&0x00FF0000) | (((uint32_t)ret_vals2[5]<<24)&0xFF000000));
+			motor_pos[h] = (int32_t) ((uint32_t)ret_vals2[6] | (((uint32_t)ret_vals2[7]<<8)&0x0000FF00) | (((uint32_t)ret_vals2[8]<<16)&0x00FF0000) | (((uint32_t)ret_vals2[9]<<24)&0xFF000000));
+			i+=4; // increment for next ID in rPacket
 		}
-		// pack dxl variables
-		int h = dxl_ID2[j]-1;
-		motor_cur[h] = (int16_t) ((uint16_t)ret_vals2[0] | (((uint16_t)ret_vals2[1]<<8)&0xFF00));
-		motor_vel[h] = (int32_t) ((uint32_t)ret_vals2[2] | (((uint32_t)ret_vals2[3]<<8)&0x0000FF00) | (((uint32_t)ret_vals2[4]<<16)&0x00FF0000) | (((uint32_t)ret_vals2[5]<<24)&0xFF000000));
-		motor_pos[h] = (int32_t) ((uint32_t)ret_vals2[6] | (((uint32_t)ret_vals2[7]<<8)&0x0000FF00) | (((uint32_t)ret_vals2[8]<<16)&0x00FF0000) | (((uint32_t)ret_vals2[9]<<24)&0xFF000000));
-		i+=4; // increment for next ID in rPacket
 	}
-	i = 10; // reset index
-	uint8_t ret_vals3[data_len];
-	for(int j=0; j<idLength3; j++){ // for each ID
-		// pull data out from rPacket
-		for (int k=0; k<data_len; k++){
-			ret_vals3[k] = dxl_bus_3.rPacket[i];
-			i++;
-		}
-		// pack dxl variables
-		int h = dxl_ID3[j]-1;
-		motor_cur[h] = (int16_t) ((uint16_t)ret_vals3[0] | (((uint16_t)ret_vals3[1]<<8)&0xFF00));
-		motor_vel[h] = (int32_t) ((uint32_t)ret_vals3[2] | (((uint32_t)ret_vals3[3]<<8)&0x0000FF00) | (((uint32_t)ret_vals3[4]<<16)&0x00FF0000) | (((uint32_t)ret_vals3[5]<<24)&0xFF000000));
-		motor_pos[h] = (int32_t) ((uint32_t)ret_vals3[6] | (((uint32_t)ret_vals3[7]<<8)&0x0000FF00) | (((uint32_t)ret_vals3[8]<<16)&0x00FF0000) | (((uint32_t)ret_vals3[9]<<24)&0xFF000000));
-		i+=4; // increment for next ID in rPacket
-	}
-
 }
 
 // send all of the motor commands
@@ -172,8 +161,6 @@ void SetFullControlCommands_DMA()
     uint8_t parameter1[num_params1];
     uint8_t num_params2 = idLength2*15; // 1 for ID + 14 for data length
 	uint8_t parameter2[num_params2];
-	uint8_t num_params3 = idLength3*15; // 1 for ID + 14 for data length
-	uint8_t parameter3[num_params3];
 
     for (int i=0; i<idLength1; i++){
     	int j = i*15;
@@ -223,100 +210,75 @@ void SetFullControlCommands_DMA()
 		parameter2[j+13] = SHIFT_TO_LSB(cur);
 		parameter2[j+14] = SHIFT_TO_MSB(cur);
 	}
-    for (int i=0; i<idLength3; i++){
-		int j = i*15;
-		int k = dxl_ID3[i]-1;
-		uint32_t pos = motor_pos_des[k];
-		uint32_t vel = motor_vel_des[k];
-		uint32_t cur = motor_cur_des[k];
-		uint32_t kp = motor_kp[k];
-		uint32_t kd = motor_kd[k];
-		parameter3[j]    = dxl_ID3[i];
-		parameter3[j+1]  = SHIFT_TO_LSB(kp);
-		parameter3[j+2]  = SHIFT_TO_MSB(kp);
-		parameter3[j+3]  = SHIFT_TO_LSB(kd);
-		parameter3[j+4]  = SHIFT_TO_MSB(kd);
-		parameter3[j+5]  = (uint8_t) (pos&0x00000FF);
-		parameter3[j+6]  = (uint8_t) ((pos&0x0000FF00)>>8);
-		parameter3[j+7]  = (uint8_t) ((pos&0x00FF0000)>>16);
-		parameter3[j+8]  = (uint8_t) (pos>>24);
-		parameter3[j+9]  = (uint8_t) (vel&0x00000FF);
-		parameter3[j+10] = (uint8_t) ((vel&0x0000FF00)>>8);
-		parameter3[j+11] = (uint8_t) ((vel&0x00FF0000)>>16);
-		parameter3[j+12] = (uint8_t) (vel>>24);
-		parameter3[j+13] = SHIFT_TO_LSB(cur);
-		parameter3[j+14] = SHIFT_TO_MSB(cur);
-	}
 
     dxl_bus_1.sWrite(14, CTRL_WRITE_START, parameter1, num_params1);
-    dxl_bus_2.sWrite(14, CTRL_WRITE_START, parameter2, num_params2);
-    dxl_bus_3.sWrite(14, CTRL_WRITE_START, parameter3, num_params3);
+    if (BUS2_ENABLE){
+    	dxl_bus_2.sWrite(14, CTRL_WRITE_START, parameter2, num_params2);
+    }
 
     tx_flag_1 = 0;
 	tx_flag_2 = 0;
-	tx_flag_3 = 0;
 
     dxl_bus_1.sendIPacket_DMA();
-	dxl_bus_2.sendIPacket_DMA();
-	dxl_bus_3.sendIPacket_DMA();
-	while((!tx_flag_1)||(!tx_flag_2)||(!tx_flag_3)){;}
+    if (BUS2_ENABLE){
+    	dxl_bus_2.sendIPacket_DMA();
+    } else {
+    	tx_flag_2 = 1;
+    }
+
+	while((!tx_flag_1)||(!tx_flag_2)){;}
 }
 
 // run motor control laws
 void updateBusses(){
 
 	// start by getting new data from the motors
-//	__HAL_TIM_SET_COUNTER(&htim1,0);
-//	eval_time[0] = __HAL_TIM_GET_COUNTER(&htim1);
 	__HAL_TIM_SET_COUNTER(&htim1,0);
 	GetBulkData_DMA();
 	eval_time[0] = __HAL_TIM_GET_COUNTER(&htim1); //Reading data from dynamixels
 	__HAL_TIM_SET_COUNTER(&htim1,0);
 
 	// transform motor positions to joint positions
-	MotorPos2JointPos(motor_pos, joint_pos);
-
-	// transform motor velocities to joint velocities 
-	MotorVel2JointVel(motor_vel, joint_vel);
-	
+	// transform motor velocities to joint velocities
 	// transform motor currents to joint torques
-	for(int i=0; i<8; i++){
+	for (int i=0; i<5; i++){
+		joint_pos[i] = pulse2rad(motor_pos[i]);
+		joint_vel[i] = rpm2rads(motor_vel[i]);
 		motor_cur_A[i] = cur_count2amp(motor_cur[i]);
+		// TODO: include different KT for smaller motors (ids 4, 5)
 		motor_tau[i] = MOTOR_KT*motor_cur_A[i];
 	}
-	MotorTau2JointTau(motor_tau, joint_tau);
 
 	// run control (depending on control mode)
-	if (!SENSOR_DEBUG){
+	if (!MOTOR_DEBUG){
 		if (CURR_CONTROL){
 			// PD control plus feedforward torque in joint-space
-			for(int i=0; i<8; i++)  {
+			for(int i=0; i<5; i++)  {
 				 joint_tau_des[i] = joint_kp[i]*(joint_pos_des[i]-joint_pos[i]) 
 				 						+ joint_kd[i]*(joint_vel_des[i]-joint_vel[i]) 
 											+ joint_tau_ff[i];
 			}
 			// convert to desired torques in motor-space
-			JointTau2MotorTau(joint_tau_des, motor_tau_des);
 			// convert to desired motor currents
-			for(int i = 0; i<8; i++){
+			for(int i = 0; i<5; i++){
+				motor_tau_des[i] = joint_tau_des[i];
+				// TODO: include different KT, current limits for smaller motors (ids 4, 5)
 				motor_cur_des_A[i] = fmaxf(fminf(motor_tau_des[i]/MOTOR_KT, MOTOR_CUR_LIM), -MOTOR_CUR_LIM);
 				motor_cur_des[i] = cur_amp2count(motor_cur_des_A[i]);
 			}
 			// set the rest of the commands to send to motors
-			for (int i=0; i<8; i++){
+			for (int i=0; i<5; i++){
 				motor_pos_des[i] = 0;
 				motor_vel_des[i] = 0;
 				motor_kp[i] = 0; 
-				motor_kd[i] = 100;
+				motor_kd[i] = 100; // bonus damping gain
 			}
-			motor_kd[3] = 100; // higher damping gains for abad motors
-			motor_kd[7] = 100;
 		}
 		else { // POSITION CONTROL
 			// transform desired joint positions to desired actuator positions
-			JointPos2MotorPos(joint_pos_des, motor_pos_des);
 			// set the rest of the commands to send to motors
-			for (int i=0; i<8; i++){
+			for (int i=0; i<5; i++){
+				motor_pos_des[i] = (int32_t)round(rad2pulse(joint_pos_des[i]));
 				motor_vel_des[i] = 0;
 				motor_cur_des[i] = 0;
 				motor_kp[i] = 800;
@@ -359,18 +321,6 @@ int dxl_main(void)
 	txHeader_joints.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	txHeader_joints.MessageMarker = 0;
 
-	txHeader_sensors.Identifier = ENABLE_COMMAND;
-	txHeader_sensors.IdType = FDCAN_STANDARD_ID;
-	txHeader_sensors.TxFrameType = FDCAN_DATA_FRAME;
-	txHeader_sensors.DataLength = FDCAN_DLC_BYTES_48;
-	txHeader_sensors.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-	txHeader_sensors.BitRateSwitch = FDCAN_BRS_ON;
-	txHeader_sensors.FDFormat = FDCAN_FD_CAN;
-	txHeader_sensors.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-	txHeader_sensors.MessageMarker = 0;
-	txMsg_sensor_enable[7] = 0xFE;
-	txMsg_sensor_disable[7] = 0xEF;
-
 	// Rx Filters
 	canFilt_en.IdType = FDCAN_STANDARD_ID;
 	canFilt_en.FilterIndex = 0;
@@ -383,8 +333,8 @@ int dxl_main(void)
 	canFilt_joints.FilterIndex = 1;
 	canFilt_joints.FilterType = FDCAN_FILTER_DUAL;
 	canFilt_joints.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-	canFilt_joints.FilterID1 = LEFT_FINGER_COMMAND;
-	canFilt_joints.FilterID2 = RIGHT_FINGER_COMMAND;
+	canFilt_joints.FilterID1 = COMMAND_BUS_1;
+	canFilt_joints.FilterID2 = COMMAND_BUS_2;
 
 	// configure specific filters
 	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &canFilt_en) != HAL_OK)
@@ -430,16 +380,13 @@ int dxl_main(void)
 
 	// Setup Routine for Dynamixels
 	printf("Setting up Dynamixel bus.\n\r");
-	Dynamixel_Startup_Routine(SENSOR_DEBUG);
-	if (SENSOR_DEBUG) {
-		printf("Starting in sensor debug mode.\n\r");
+	Dynamixel_Startup_Routine(MOTOR_DEBUG);
+	if (MOTOR_DEBUG) {
+		printf("Starting in motor debug mode.\n\r");
 	}
 
 	// enable CAN Interrupts
 	HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0); // Initialize CAN1 Rx0 Interrupt
-
-	// start sensor board
-	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_sensors, txMsg_sensor_enable);
 
 	// enable Timer Interrupts
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
@@ -451,8 +398,8 @@ int dxl_main(void)
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 	while (1)
 	{
-		// just blink the LED in sensor debug mode
-		if (SENSOR_DEBUG) {
+		// just blink the LED in sensor MOTOR_DEBUG mode
+		if (MOTOR_DEBUG) {
 			if(loop_count % 1000000 == 0){
 //				printf("Loop time: %u \r\n",eval_time);
 				HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
@@ -468,8 +415,6 @@ int dxl_main(void)
 			// disable Timer Interrupts
 			HAL_TIM_Base_Stop_IT(&htim2);
 			HAL_TIM_Base_Stop_IT(&htim3);
-			// stop sensor board
-			HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_sensors, txMsg_sensor_disable);
 
 			// turn off some LEDs
 			HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
@@ -496,11 +441,11 @@ int dxl_main(void)
 					} else DXL_MODE = POSITION_CONTROL;
 				// start by disabling all of the motors
 				Dynamixel_Shutdown_Routine();
-				Dynamixel_Startup_Routine(SENSOR_DEBUG); // in debug mode, the dynamixels will be disabled
+				Dynamixel_Startup_Routine(MOTOR_DEBUG); // in MOTOR_DEBUG mode, the dynamixels will be disabled
 			}
 
 			// reset CAN commands
-			for (int i=0; i<8; i++){
+			for (int i=0; i<5; i++){
 				joint_pos_des[i] = 0.0f;
 				joint_vel_des[i] = 0.0f;
 				joint_tau_ff[i] = 0.0f;
@@ -508,8 +453,7 @@ int dxl_main(void)
 				joint_kd[i] = 0.02f;
 			}
 
-			// turn on LEDs
-
+			// turn on LED
 			HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 			// reset flag
 			HAND_RESET = false;
@@ -517,8 +461,6 @@ int dxl_main(void)
 			// and reactivate the interrupts
 			// enable CAN Interrupts
 			HAL_FDCAN_ActivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE,0);
-			// restart sensor board
-			HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_sensors, txMsg_sensor_enable);
 			// enable Timer Interrupts
 			HAL_TIM_Base_Start_IT(&htim2);
 			HAL_TIM_Base_Start_IT(&htim3);
@@ -551,9 +493,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	} else if(huart->Instance==USART2){
 //		printf("Rx 2 done!\n\r");
 		rx_flag_2 = 1;
-	} else if(huart->Instance==UART7){
-//		printf("Rx 3 done!\n\r");
-		rx_flag_3 = 1;
 	}
 }
 
@@ -568,10 +507,6 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_GPIO_WritePin(RTS2_GPIO_Port, RTS2_Pin, GPIO_PIN_RESET);
 //		printf("Tx 2 done!\n\r");
 		tx_flag_2 = 1;
-	} else if(huart->Instance==UART7){
-		HAL_GPIO_WritePin(RTS7_GPIO_Port, RTS7_Pin, GPIO_PIN_RESET);
-//		printf("Tx 3 done!\n\r");
-		tx_flag_3 = 1;
 	}
 }
 
@@ -580,17 +515,18 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 	if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET){
 		HAL_FDCAN_GetRxMessage(canHandle, FDCAN_RX_FIFO0, &rxMsg_joints, rxBuf_joints);
 		uint32_t id = rxMsg_joints.Identifier;
-		// Left finger
-		if(id==LEFT_FINGER_COMMAND){
-			int p_int[4], v_int[4], kp_int[4], kd_int[4], t_int[4];
-			for(int i=0;i<4;i++){
+		// First command, bus 1
+		if(id==COMMAND_BUS_1){
+			// NOTE: bus 1 has 3 motors
+			int p_int[3], v_int[3], kp_int[3], kd_int[3], t_int[3];
+			for(int i=0;i<3;i++){
 				p_int[i] = (rxBuf_joints[i*8+0]<<8)|rxBuf_joints[i*8+1];
 				v_int[i] = (rxBuf_joints[i*8+2]<<4)|(rxBuf_joints[i*8+3]>>4);
 				kp_int[i] = ((rxBuf_joints[i*8+3]&0xF)<<8)|rxBuf_joints[i*8+4];
 				kd_int[i] = (rxBuf_joints[i*8+5]<<4)|(rxBuf_joints[i*8+6]>>4);
 				t_int[i] = ((rxBuf_joints[i*8+6]&0xF)<<8)|rxBuf_joints[i*8+7];
 			}
-			for(int j=0;j<4;j++){
+			for(int j=0;j<3;j++){
 				joint_pos_des[j] = uint_to_float(p_int[j], P_MIN, P_MAX, 16);
 				joint_vel_des[j] = uint_to_float(v_int[j], V_MIN, V_MAX, 12);
 				joint_kp[j] = uint_to_float(kp_int[j], KP_MIN, KP_MAX, 12)/KP_SCALE;
@@ -598,22 +534,23 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 				joint_tau_ff[j] = uint_to_float(t_int[j], T_MIN, T_MAX, 12)/T_SCALE;
 			}
 		}
-		// Right finger
-		else if(id==RIGHT_FINGER_COMMAND){
-			int p_int[4], v_int[4], kp_int[4], kd_int[4], t_int[4];
-			for(int i=0;i<4;i++){
+		// Second command
+		else if(id==COMMAND_BUS_2){
+			// NOTE: bus 2 has 2 motors
+			int p_int[2], v_int[2], kp_int[2], kd_int[2], t_int[2];
+			for(int i=0;i<2;i++){
 				p_int[i] = (rxBuf_joints[i*8+0]<<8)|rxBuf_joints[i*8+1];
 				v_int[i] = (rxBuf_joints[i*8+2]<<4)|(rxBuf_joints[i*8+3]>>4);
 				kp_int[i] = ((rxBuf_joints[i*8+3]&0xF)<<8)|rxBuf_joints[i*8+4];
 				kd_int[i] = (rxBuf_joints[i*8+5]<<4)|(rxBuf_joints[i*8+6]>>4);
 				t_int[i] = ((rxBuf_joints[i*8+6]&0xF)<<8)|rxBuf_joints[i*8+7];
 			}
-			for(int j=0;j<4;j++){
-				joint_pos_des[j+4] = uint_to_float(p_int[j], P_MIN, P_MAX, 16);
-				joint_vel_des[j+4] = uint_to_float(v_int[j], V_MIN, V_MAX, 12);
-				joint_kp[j+4] = uint_to_float(kp_int[j], KP_MIN, KP_MAX, 12)/KP_SCALE;
-				joint_kd[j+4] = uint_to_float(kd_int[j], KD_MIN, KD_MAX, 12)/KD_SCALE;
-				joint_tau_ff[j+4] = uint_to_float(t_int[j], T_MIN, T_MAX, 12)/T_SCALE;
+			for(int j=0;j<2;j++){
+				joint_pos_des[j+3] = uint_to_float(p_int[j], P_MIN, P_MAX, 16);
+				joint_vel_des[j+3] = uint_to_float(v_int[j], V_MIN, V_MAX, 12);
+				joint_kp[j+3] = uint_to_float(kp_int[j], KP_MIN, KP_MAX, 12)/KP_SCALE;
+				joint_kd[j+3] = uint_to_float(kd_int[j], KD_MIN, KD_MAX, 12)/KD_SCALE;
+				joint_tau_ff[j+3] = uint_to_float(t_int[j], T_MIN, T_MAX, 12)/T_SCALE;
 			}
 		}
 		// Mode select message
@@ -621,7 +558,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 			if(rxBuf_joints[7] == MS_CUR_CTRL){ // current control
 				CURR_CONTROL = true;
 				MODE_SELECTED = true;
-				SENSOR_DEBUG = false;
+				MOTOR_DEBUG = false;
 				HAND_RESET = true;
 				HAL_TIM_Base_Stop_IT(&htim2);
 				HAL_TIM_Base_Stop_IT(&htim3);
@@ -630,16 +567,16 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 			else if (rxBuf_joints[7] == MS_POS_CTRL){ // position control
 				CURR_CONTROL = false;
 				MODE_SELECTED = true;
-				SENSOR_DEBUG = false;
+				MOTOR_DEBUG = false;
 				HAND_RESET = true;
 				HAL_TIM_Base_Stop_IT(&htim2);
 				HAL_TIM_Base_Stop_IT(&htim3);
 				HAL_FDCAN_DeactivateNotification(&hfdcan1,FDCAN_IT_RX_FIFO0_NEW_MESSAGE);
 			}
-			else if (rxBuf_joints[7] == MS_SENSE_DEBUG){ // sensor debug
+			else if (rxBuf_joints[7] == MS_MOTOR_DEBUG){ // sensor MOTOR_DEBUG
 				CURR_CONTROL = false;
 				MODE_SELECTED = true;
-				SENSOR_DEBUG = true;
+				MOTOR_DEBUG = true;
 				HAND_RESET = true;
 				HAL_TIM_Base_Stop_IT(&htim2);
 				HAL_TIM_Base_Stop_IT(&htim3);
@@ -648,7 +585,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *canHandle, uint32_t RxFifo0I
 			else if (rxBuf_joints[7] == MS_DISABLE){ // disable command
 				CURR_CONTROL = false;
 				MODE_SELECTED = false;
-				SENSOR_DEBUG = false;
+				MOTOR_DEBUG = false;
 				HAND_RESET = true;
 				HAL_TIM_Base_Stop_IT(&htim2);
 				HAL_TIM_Base_Stop_IT(&htim3);

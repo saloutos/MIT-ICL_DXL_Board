@@ -38,14 +38,14 @@ void pack_reply48_joints(uint8_t* fdmsg, float* p, float* v, float* t){
 	int v_int[8];
 	int t_int[8];
 
-	for (int i=0; i<8; i++){
+	// now, only 5 motors -> 25 of 48 bytes are used
+	for (int i=0; i<5; i++){
 		p_int[i] = float_to_uint(p[i],P_MIN, P_MAX, 16);
 		v_int[i] = float_to_uint(v[i],V_MIN, V_MAX, 12);
 		t_int[i] = float_to_uint(t[i]*T_SCALE, -T_MAX, T_MAX, 12);
 	}
-
 	int k = 0;
-	for (int j=0; j<8; j++){ // 40 bytes total
+	for (int j=0; j<5; j++){
 		fdmsg[k] = p_int[j]>>8;
 		fdmsg[k+1] = p_int[j]&0xFF;
 		fdmsg[k+2] = v_int[j]>>4;
