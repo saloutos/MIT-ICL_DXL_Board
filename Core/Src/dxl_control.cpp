@@ -16,8 +16,8 @@
 #define VERSION_NUMBER 	0.01f
 
 // TODO: define these for both types of motors
-#define MOTOR_KT 		3.7f/2.7f 	// TODO: replace this!
-#define MOTOR_CUR_LIM 	2.7f 		// TODO: replace this!
+#define MOTOR_KT 		4.1f/2.3f 	// TODO: replace this!
+#define MOTOR_CUR_LIM 	2.3f 		// TODO: replace this!
 
 #define cur_count2amp(x) (x*(2.69f/1000.0f))
 #define cur_amp2count(x) (int16_t)(x*(1000.0f/2.69f))
@@ -246,6 +246,7 @@ void updateBusses(){
 		motor_cur_A[i] = cur_count2amp(motor_cur[i]);
 		// TODO: include different KT for smaller motors (ids 4, 5)
 		motor_tau[i] = MOTOR_KT*motor_cur_A[i];
+		joint_tau[i] = motor_tau[i];
 	}
 
 	// run control (depending on control mode)
